@@ -1,0 +1,16 @@
+.gradle/
+.tools/
+**/build/
+local.properties
+app/src/androidTest/assets/receipts/
+evidence/
+dist/
+*.apk
+app/src/androidTest/assets/models/
+app/src/main/assets/models/
+__pycache__/
+.env
+.env.*
+*.jks
+*.keystore
+*.log
