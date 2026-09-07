@@ -28,10 +28,14 @@ final class ReceiptEditor {
     long currentSelectedSum = 0;
 
     ReceiptEditor(Context c, LinearLayout body, Receipt receipt, Uri uri) {
-        this(c, body, null, receipt, uri, new NotionSettings(c));
+        this(c, body, null, receipt, uri, new NotionSettings(c), null, null);
     }
 
     ReceiptEditor(Context c, LinearLayout itemsBody, LinearLayout photoBody, Receipt receipt, Uri uri, NotionSettings settings) {
+        this(c, itemsBody, photoBody, receipt, uri, settings, null, null);
+    }
+
+    ReceiptEditor(Context c, LinearLayout itemsBody, LinearLayout photoBody, Receipt receipt, Uri uri, NotionSettings settings, Runnable onNavigateToPhoto, Runnable onBackToItems) {
         this.receipt = receipt;
         this.imageUri = uri;
         this.notionSettings = settings;
@@ -92,6 +96,24 @@ final class ReceiptEditor {
         tvSubTotal.setTextColor(Ui.COLOR_TEXT_MUTED);
         tvSubTotal.setPadding(0, Ui.dp(c, 4), 0, 0);
         headerCard.addView(tvSubTotal);
+
+        // 원본 영수증 탭으로 바로 이동하는 버튼
+        if (onNavigateToPhoto != null) {
+            Button btnViewFullPhoto = new Button(c);
+            btnViewFullPhoto.setText("📷 원본 영수증 전체 보기  ›");
+            btnViewFullPhoto.setTextSize(13);
+            btnViewFullPhoto.setTypeface(null, android.graphics.Typeface.BOLD);
+            btnViewFullPhoto.setTextColor(Color.parseColor("#2563EB"));
+            btnViewFullPhoto.setBackground(Ui.roundedRect(Color.parseColor("#EFF6FF"), Color.parseColor("#BFDBFE"), 10, 1));
+            btnViewFullPhoto.setPadding(Ui.dp(c, 12), Ui.dp(c, 10), Ui.dp(c, 12), Ui.dp(c, 10));
+            LinearLayout.LayoutParams vfLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            vfLp.setMargins(0, Ui.dp(c, 12), 0, 0);
+            btnViewFullPhoto.setLayoutParams(vfLp);
+            btnViewFullPhoto.setOnClickListener(v -> onNavigateToPhoto.run());
+            headerCard.addView(btnViewFullPhoto);
+        }
+
         itemsBody.addView(headerCard);
 
         // Warnings Checkbox
@@ -109,6 +131,23 @@ final class ReceiptEditor {
         // Populate photoBody (원본 영수증 탭)
         if (photoBody != null) {
             photoBody.removeAllViews();
+
+            // 0. 정산 품목으로 돌아가기 버튼
+            if (onBackToItems != null) {
+                Button btnBackToItems = new Button(c);
+                btnBackToItems.setText("←  정산 품목으로 돌아가기");
+                btnBackToItems.setTextSize(14);
+                btnBackToItems.setTypeface(null, android.graphics.Typeface.BOLD);
+                btnBackToItems.setTextColor(Ui.COLOR_PRIMARY);
+                btnBackToItems.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 10, 1));
+                btnBackToItems.setPadding(Ui.dp(c, 14), Ui.dp(c, 12), Ui.dp(c, 14), Ui.dp(c, 12));
+                LinearLayout.LayoutParams bbLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                bbLp.setMargins(0, 0, 0, Ui.dp(c, 12));
+                btnBackToItems.setLayoutParams(bbLp);
+                btnBackToItems.setOnClickListener(v -> onBackToItems.run());
+                photoBody.addView(btnBackToItems);
+            }
 
             // 1. Original Receipt Photo Card
             LinearLayout photoCard = Ui.card(c);

@@ -377,7 +377,10 @@ public class MainActivity extends Activity {
                 if (current != scanId) return;
                 currentReceipt = receipt;
                 tab0Body.removeAllViews();
-                new ReceiptEditor(this, tab0Body, tab1Body, receipt, uri, notionSettings);
+                new ReceiptEditor(this, tab0Body, tab1Body, receipt, uri, notionSettings,
+                    () -> switchTab(1),
+                    () -> switchTab(0)
+                );
                 switchTab(0);
             }).addOnFailureListener(this, e -> {
                 if (current == scanId) {
@@ -388,6 +391,15 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             if (progress != null) progress.setVisibility(View.GONE);
             status.setText("사진을 열 수 없습니다: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (currentTab != 0) {
+            switchTab(0);
+        } else {
+            super.onBackPressed();
         }
     }
 
