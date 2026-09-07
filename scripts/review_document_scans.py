@@ -7,8 +7,10 @@ from pathlib import Path
 from PIL import Image, ImageOps
 from evaluate_large_ocr import lines
 
+import os
 ROOT=Path(__file__).resolve().parents[1]/'evidence'
-SOURCE=Path('C:/Users/surromind/Downloads/Document scans')
+_DEFAULT=Path(os.environ.get('SCAN_DIR',r'C:\Users\박경민\Downloads\Document scans'))
+SOURCE=_DEFAULT if _DEFAULT.exists() else Path('C:/Users/surromind/Downloads/Document scans')
 def read(name):
     return json.loads((ROOT/name).read_text(encoding='utf8'))
 

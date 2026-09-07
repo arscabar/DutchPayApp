@@ -40,7 +40,8 @@ final class PaddleScan {
                         if(diagnostic.optBoolean("accepted") && !old.equals(next))
                             r.warnings.add("부분 재인식: "+old+" → "+next+" (원본 확인 필요)");
                     }
-                    r.method="Paddle 한국어 OCR · "+r.method;
+                    String backendDesc=engine.korean.backend!=null?" ("+engine.korean.backend.description+")":"";
+                    r.method="Paddle 한국어 OCR"+backendDesc+" · "+r.method;
                     return r;
                     }
                 }

@@ -16,26 +16,36 @@ final class KoreanModel implements AutoCloseable {
     final OrtSession session;
     final JSONArray chars;
     final Context context;
+    final AcceleratedOrt.Backend backend;
     KoreanModel(Context context) throws Exception {
         this(context,"models/korean.onnx","models/characters.json");
     }
     KoreanModel(Context context,String modelPath,String charsPath) throws Exception {
         this.context=context.getApplicationContext();
+        var config=AcceleratedOrt.createOptimalOptions();
+        this.backend=config.backend;
         try(var model=context.getAssets().open(modelPath);
             var dict=context.getAssets().open(charsPath);
-            var options=new OrtSession.SessionOptions()) {
-            options.setIntraOpNumThreads(2);
+            var options=config.options) {
             chars=new JSONArray(new String(bytes(dict),java.nio.charset.StandardCharsets.UTF_8));
             session=env.createSession(bytes(model),options);
         }
     }
     String read(Bitmap source) throws Exception { return readWithConfidence(source).text; }
     Reading readWithConfidence(Bitmap source) throws Exception {
-        return decode(infer(source),chars);
+        int w=Math.max(1,(int)Math.ceil(source.getWidth()*48.0/source.getHeight()));
+        int width=AcceleratedOrt.bucketWidth(w);
+        float[][] values=infer(source,w,width);
+        int validSteps=Math.min(values.length,(int)Math.ceil((double)values.length*w/width)+1);
+        return decode(values,chars,validSteps);
     }
     float[][] infer(Bitmap source) throws Exception {
         int w=Math.max(1,(int)Math.ceil(source.getWidth()*48.0/source.getHeight()));
-        int width=Math.max(320,w), plane=48*width;
+        int width=AcceleratedOrt.bucketWidth(w);
+        return infer(source,w,width);
+    }
+    float[][] infer(Bitmap source,int w,int width) throws Exception {
+        int plane=48*width;
         Bitmap scaled=Bitmap.createScaledBitmap(source,w,48,true);
         int[] pixels=new int[w*48]; scaled.getPixels(pixels,0,w,0,0,w,48);
         if(scaled!=source)scaled.recycle();
@@ -48,8 +58,13 @@ final class KoreanModel implements AutoCloseable {
         }
     }
     static Reading decode(float[][] values,JSONArray chars) throws Exception {
+        return decode(values,chars,values.length);
+    }
+    static Reading decode(float[][] values,JSONArray chars,int maxSteps) throws Exception {
         StringBuilder text=new StringBuilder(); int previous=-1,n=0; double score=0;
-        for(float[] row:values) {
+        int limit=Math.min(values.length,maxSteps);
+        for(int i=0;i<limit;i++) {
+            float[] row=values[i];
             if(row.length!=chars.length())throw new IllegalStateException("Character table mismatch");
             int best=0; for(int j=1;j<row.length;j++)if(row[j]>row[best])best=j;
             if(best>0 && best!=previous){text.append(chars.getString(best));score+=row[best];n++;}
