@@ -8,6 +8,7 @@ import java.util.List;
 public class Item {
     public String name;
     public String originalName = "";
+    public android.graphics.Bitmap crop;
     public final List<String> nameCandidates = new ArrayList<>();
     public long unit, printedTotal;
     public int count;

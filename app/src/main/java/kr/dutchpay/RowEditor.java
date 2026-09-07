@@ -69,6 +69,16 @@ final class RowEditor extends LinearLayout {
             autoBadge.setLayoutParams(bLp);
             nameRow.addView(autoBadge);
         }
+
+        if (item.crop != null) {
+            TextView cropBadge = Ui.badge(c, "📷 영수증", Color.parseColor("#F1F5F9"), Color.parseColor("#475569"));
+            cropBadge.setTextSize(10);
+            cropBadge.setPadding(Ui.dp(c, 5), Ui.dp(c, 1), Ui.dp(c, 5), Ui.dp(c, 1));
+            LinearLayout.LayoutParams cbLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            cbLp.setMargins(Ui.dp(c, 4), 0, 0, 0);
+            cropBadge.setLayoutParams(cbLp);
+            nameRow.addView(cropBadge);
+        }
         infoCol.addView(nameRow);
 
         tvSubInfo = Ui.text(c, formatSubInfo(), 12);
@@ -108,6 +118,48 @@ final class RowEditor extends LinearLayout {
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         dLp.setMargins(0, Ui.dp(c, 6), 0, Ui.dp(c, 4));
         detailLayout.setLayoutParams(dLp);
+
+        // 2-0. 영수증 원본 크롭 카드 (영수증 인쇄본 대조 확인)
+        if (item.crop != null) {
+            LinearLayout cropCard = new LinearLayout(c);
+            cropCard.setOrientation(VERTICAL);
+            cropCard.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 10, 1));
+            int cPad = Ui.dp(c, 10);
+            cropCard.setPadding(cPad, cPad, cPad, cPad);
+            LinearLayout.LayoutParams cropLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            cropLp.setMargins(0, 0, 0, Ui.dp(c, 12));
+            cropCard.setLayoutParams(cropLp);
+
+            LinearLayout cropHeader = new LinearLayout(c);
+            cropHeader.setOrientation(HORIZONTAL);
+            cropHeader.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView lblCrop = Ui.text(c, "📷 원본 영수증 인쇄 크롭", 12);
+            lblCrop.setTypeface(null, android.graphics.Typeface.BOLD);
+            lblCrop.setTextColor(Color.parseColor("#475569"));
+            LinearLayout.LayoutParams lblLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+            lblCrop.setLayoutParams(lblLp);
+            cropHeader.addView(lblCrop);
+
+            TextView btnZoom = Ui.text(c, "🔍 크게 보기", 12);
+            btnZoom.setTextColor(Color.parseColor("#2563EB"));
+            btnZoom.setTypeface(null, android.graphics.Typeface.BOLD);
+            btnZoom.setPadding(Ui.dp(c, 6), Ui.dp(c, 2), Ui.dp(c, 6), Ui.dp(c, 2));
+            btnZoom.setOnClickListener(v -> showZoomDialog(c, item));
+            cropHeader.addView(btnZoom);
+            cropCard.addView(cropHeader);
+
+            ImageView ivCrop = new ImageView(c);
+            ivCrop.setImageBitmap(item.crop);
+            ivCrop.setAdjustViewBounds(true);
+            ivCrop.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            ivCrop.setPadding(0, Ui.dp(c, 6), 0, Ui.dp(c, 2));
+            ivCrop.setOnClickListener(v -> showZoomDialog(c, item));
+            cropCard.addView(ivCrop);
+
+            detailLayout.addView(cropCard);
+        }
 
         // 2-1. 품목명 입력란
         TextView lblName = Ui.text(c, "품목명", 12);
@@ -403,5 +455,51 @@ final class RowEditor extends LinearLayout {
             + unit.getText() + "원 × " + qtyStr
             + (!source.quantityKnown ? " (직접 입력한 적용 수량, 원수량 미인식)" : source.amountBased ? " / 원수량 " + source.count : "")
             + " × " + pctStr + "% = " + amount() + "원";
+    }
+
+    private void showZoomDialog(Context c, Item item) {
+        if (item.crop == null) return;
+        android.app.Dialog dialog = new android.app.Dialog(c);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+
+        LinearLayout dialogLayout = new LinearLayout(c);
+        dialogLayout.setOrientation(VERTICAL);
+        dialogLayout.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 16, 1));
+        int pad = Ui.dp(c, 20);
+        dialogLayout.setPadding(pad, pad, pad, pad);
+
+        TextView title = Ui.text(c, item.name, 17);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextColor(Ui.COLOR_TEXT_MAIN);
+        dialogLayout.addView(title);
+
+        TextView sub = Ui.text(c, "영수증 원본 인쇄 영역 대조", 12);
+        sub.setTextColor(Ui.COLOR_TEXT_MUTED);
+        sub.setPadding(0, Ui.dp(c, 2), 0, Ui.dp(c, 14));
+        dialogLayout.addView(sub);
+
+        ImageView zoomIv = new ImageView(c);
+        zoomIv.setImageBitmap(item.crop);
+        zoomIv.setAdjustViewBounds(true);
+        zoomIv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        zoomIv.setBackground(Ui.roundedRect(Color.parseColor("#F8FAFC"), Ui.COLOR_STROKE, 8, 1));
+        int imgPad = Ui.dp(c, 10);
+        zoomIv.setPadding(imgPad, imgPad, imgPad, imgPad);
+        LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        ivLp.setMargins(0, 0, 0, Ui.dp(c, 16));
+        zoomIv.setLayoutParams(ivLp);
+        dialogLayout.addView(zoomIv);
+
+        Button btnClose = Ui.button(c, "닫기", Ui.COLOR_PRIMARY, Color.WHITE, dialog::dismiss);
+        btnClose.setTextSize(15);
+        dialogLayout.addView(btnClose);
+
+        dialog.setContentView(dialogLayout);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        }
+        dialog.show();
     }
 }

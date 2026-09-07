@@ -23,6 +23,10 @@ public final class NotionClient {
         void onError(String message);
     }
 
+    public static void testConnection(NotionSettings settings, Callback callback) {
+        createPage(settings, "DutchPay OCR 연동 테스트", 0, "", "노션 데이터베이스 연동 테스트 성공입니다.", callback);
+    }
+
     public static void createPage(NotionSettings settings, String title, long amount, String date, String note, Callback callback) {
         if (!settings.isConfigured()) {
             callback.onError("노션 연동이 설정되지 않았습니다. 우측 상단 ⚙️ 설정에서 API Key와 데이터베이스 ID를 입력하세요.");

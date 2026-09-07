@@ -13,19 +13,19 @@ import android.view.ViewGroup;
 import android.widget.*;
 
 final class Ui {
-    // Premium Color Palette
-    static final int COLOR_BG = Color.parseColor("#F1F5F9");        // Slate 100
+    // Premium Toss / KakaoPay Style Palette
+    static final int COLOR_BG = Color.parseColor("#F2F4F6");        // Toss soft gray
     static final int COLOR_CARD = Color.parseColor("#FFFFFF");      // White
-    static final int COLOR_STROKE = Color.parseColor("#E2E8F0");    // Slate 200
-    static final int COLOR_TEXT_MAIN = Color.parseColor("#0F172A"); // Slate 900
-    static final int COLOR_TEXT_MUTED = Color.parseColor("#64748B");// Slate 500
-    static final int COLOR_PRIMARY = Color.parseColor("#2563EB");   // Blue 600
-    static final int COLOR_PRIMARY_HOVER = Color.parseColor("#1D4ED8");
-    static final int COLOR_NOTION = Color.parseColor("#0F172A");    // Notion Black
+    static final int COLOR_STROKE = Color.parseColor("#E5E8EB");    // Toss light border
+    static final int COLOR_TEXT_MAIN = Color.parseColor("#191F28"); // Toss primary dark
+    static final int COLOR_TEXT_MUTED = Color.parseColor("#8B95A1");// Toss secondary gray
+    static final int COLOR_PRIMARY = Color.parseColor("#3182F6");   // Toss signature blue
+    static final int COLOR_PRIMARY_HOVER = Color.parseColor("#1B64DA");
+    static final int COLOR_NOTION = Color.parseColor("#191F28");    // Sleek black
     static final int COLOR_SUCCESS = Color.parseColor("#059669");   // Emerald 600
-    static final int COLOR_SUCCESS_LIGHT = Color.parseColor("#ECFDF5");
-    static final int COLOR_WARNING = Color.parseColor("#D97706");   // Amber 600
-    static final int COLOR_WARNING_LIGHT = Color.parseColor("#FFFBEB");
+    static final int COLOR_SUCCESS_LIGHT = Color.parseColor("#E8F5E9");
+    static final int COLOR_WARNING = Color.parseColor("#F04452");   // Toss warning red/amber
+    static final int COLOR_WARNING_LIGHT = Color.parseColor("#FEECEE");
 
     static int dp(Context c, float dp) {
         return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, c.getResources().getDisplayMetrics()));

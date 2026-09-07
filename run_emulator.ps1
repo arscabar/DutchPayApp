@@ -6,7 +6,10 @@ Write-Host "Waiting for emulator device..." -ForegroundColor Yellow
 Set-Location "C:\Program Files (x86)\Android\android-sdk\platform-tools"
 .\adb.exe wait-for-device
 
+Write-Host "Installing latest DutchPay App build..." -ForegroundColor Yellow
+.\adb.exe install -r "e:\DutchPayApp\app\build\outputs\apk\debug\app-debug.apk"
+
 Write-Host "Launching DutchPay App..." -ForegroundColor Green
-.\adb.exe shell am start -n kr.dutchpay/.MainActivity
+.\adb.exe shell am start -S -n kr.dutchpay/.MainActivity
 Write-Host "`n[Done] App is running on the emulator!" -ForegroundColor Green
 Pause

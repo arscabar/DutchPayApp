@@ -58,6 +58,17 @@ public final class NotionSettings {
         return !getApiKey().isEmpty() && !getDatabaseId().isEmpty();
     }
 
+    public void saveConfig(String apiKey, String dbId, String title, String amount, String date, String note) {
+        prefs.edit()
+            .putString(KEY_API_KEY, apiKey)
+            .putString(KEY_DATABASE_ID, dbId)
+            .putString(KEY_PROP_TITLE, title == null || title.isEmpty() ? "이름" : title)
+            .putString(KEY_PROP_AMOUNT, amount == null || amount.isEmpty() ? "금액" : amount)
+            .putString(KEY_PROP_DATE, date == null || date.isEmpty() ? "날짜" : date)
+            .putString(KEY_PROP_NOTE, note == null || note.isEmpty() ? "비고" : note)
+            .apply();
+    }
+
     public void showDialog(Context context, Runnable onSaved) {
         ScrollView scroll = new ScrollView(context);
         LinearLayout layout = new LinearLayout(context);
