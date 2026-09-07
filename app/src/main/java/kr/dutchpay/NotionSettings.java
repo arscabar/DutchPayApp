@@ -28,14 +28,9 @@ public final class NotionSettings {
 
     public String getDatabaseId() {
         String id = prefs.getString(KEY_DATABASE_ID, "").trim();
-        // Notion database ID may be a full URL (https://www.notion.so/.../DATABASE_ID?v=...)
-        // Extract 32-char hex string if URL is entered
-        if (id.contains("/")) {
-            String path = id.substring(id.lastIndexOf('/') + 1);
-            if (path.contains("?")) path = path.substring(0, path.indexOf('?'));
-            if (path.length() >= 32) return path.replaceAll("-", "");
-        }
-        return id.replaceAll("-", "");
+        if (id.contains("?")) id = id.substring(0, id.indexOf('?'));
+        if (id.contains("/")) id = id.substring(id.lastIndexOf('/') + 1);
+        return id.replaceAll("-", "").trim();
     }
 
     public String getPropTitle() {

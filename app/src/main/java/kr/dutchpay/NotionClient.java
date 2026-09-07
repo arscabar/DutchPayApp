@@ -36,6 +36,56 @@ public final class NotionClient {
         EXECUTOR.execute(() -> {
             HttpURLConnection conn = null;
             try {
+                String titleCol = settings.getPropTitle();
+                String amountCol = settings.getPropAmount();
+                String dateCol = settings.getPropDate();
+                String noteCol = settings.getPropNote();
+                String placeCol = null;
+
+                // Dynamically discover database properties if needed
+                try {
+                    URL dbUrl = new URL("https://api.notion.com/v1/databases/" + settings.getDatabaseId());
+                    HttpURLConnection dbConn = (HttpURLConnection) dbUrl.openConnection();
+                    dbConn.setRequestMethod("GET");
+                    dbConn.setConnectTimeout(8000);
+                    dbConn.setReadTimeout(8000);
+                    dbConn.setRequestProperty("Authorization", "Bearer " + settings.getApiKey());
+                    dbConn.setRequestProperty("Notion-Version", NOTION_VERSION);
+                    if (dbConn.getResponseCode() == 200) {
+                        try (BufferedReader r = new BufferedReader(new InputStreamReader(dbConn.getInputStream(), StandardCharsets.UTF_8))) {
+                            StringBuilder sb = new StringBuilder();
+                            String line;
+                            while ((line = r.readLine()) != null) sb.append(line);
+                            JSONObject dbJson = new JSONObject(sb.toString());
+                            JSONObject props = dbJson.optJSONObject("properties");
+                            if (props != null) {
+                                Iterator<String> keys = props.keys();
+                                while (keys.hasNext()) {
+                                    String k = keys.next();
+                                    JSONObject pObj = props.optJSONObject(k);
+                                    if (pObj == null) continue;
+                                    String type = pObj.optString("type");
+                                    if ("title".equals(type)) {
+                                        titleCol = k;
+                                    } else if ("number".equals(type) && (amountCol.isEmpty() || "금액".equals(amountCol) || k.contains("금액") || k.contains("비용"))) {
+                                        amountCol = k;
+                                    } else if ("date".equals(type) && (dateCol.isEmpty() || "날짜".equals(dateCol) || k.contains("날짜") || k.contains("일시"))) {
+                                        dateCol = k;
+                                    } else if ("rich_text".equals(type)) {
+                                        if (k.contains("비고") || k.contains("내역") || k.contains("메모")) {
+                                            noteCol = k;
+                                        } else if (k.contains("장소") || k.contains("상호") || k.contains("매장")) {
+                                            placeCol = k;
+                                        }
+                                    }
+                                }
+                                settings.saveConfig(settings.getApiKey(), settings.getDatabaseId(), titleCol, amountCol, dateCol, noteCol);
+                            }
+                        }
+                    }
+                    dbConn.disconnect();
+                } catch (Exception ignored) {}
+
                 JSONObject payload = new JSONObject();
 
                 // 1. Parent database
@@ -46,32 +96,47 @@ public final class NotionClient {
                 // 2. Properties
                 JSONObject properties = new JSONObject();
 
-                // Title property
+                // Title property (e.g. 목록 or 이름)
                 JSONObject titleProp = new JSONObject();
                 JSONArray titleArr = new JSONArray();
                 JSONObject titleText = new JSONObject();
                 titleText.put("text", new JSONObject().put("content", title.isEmpty() ? "영수증 정산" : title));
                 titleArr.put(titleText);
                 titleProp.put("title", titleArr);
-                properties.put(settings.getPropTitle(), titleProp);
+                properties.put(titleCol, titleProp);
 
                 // Amount (number)
-                JSONObject amountProp = new JSONObject();
-                amountProp.put("number", amount);
-                properties.put(settings.getPropAmount(), amountProp);
+                if (amountCol != null && !amountCol.isEmpty()) {
+                    JSONObject amountProp = new JSONObject();
+                    amountProp.put("number", amount);
+                    properties.put(amountCol, amountProp);
+                }
+
+                // Place (rich_text, if exists)
+                if (placeCol != null && !placeCol.isEmpty() && !title.isEmpty()) {
+                    JSONObject placeProp = new JSONObject();
+                    JSONArray placeArr = new JSONArray();
+                    JSONObject placeText = new JSONObject();
+                    placeText.put("text", new JSONObject().put("content", title));
+                    placeArr.put(placeText);
+                    placeProp.put("rich_text", placeArr);
+                    properties.put(placeCol, placeProp);
+                }
 
                 // Date property (if available, format YYYY-MM-DD)
-                String formattedDate = normalizeDate(date);
-                if (!formattedDate.isEmpty()) {
-                    JSONObject dateProp = new JSONObject();
-                    JSONObject dateVal = new JSONObject();
-                    dateVal.put("start", formattedDate);
-                    dateProp.put("date", dateVal);
-                    properties.put(settings.getPropDate(), dateProp);
+                if (dateCol != null && !dateCol.isEmpty()) {
+                    String formattedDate = normalizeDate(date);
+                    if (!formattedDate.isEmpty()) {
+                        JSONObject dateProp = new JSONObject();
+                        JSONObject dateVal = new JSONObject();
+                        dateVal.put("start", formattedDate);
+                        dateProp.put("date", dateVal);
+                        properties.put(dateCol, dateProp);
+                    }
                 }
 
                 // Note / Details (rich_text, chunked by 1800 chars for Notion API limits)
-                if (note != null && !note.isEmpty()) {
+                if (noteCol != null && !noteCol.isEmpty() && note != null && !note.isEmpty()) {
                     JSONObject noteProp = new JSONObject();
                     JSONArray noteArr = new JSONArray();
                     int start = 0;
@@ -83,7 +148,7 @@ public final class NotionClient {
                         start = end;
                     }
                     noteProp.put("rich_text", noteArr);
-                    properties.put(settings.getPropNote(), noteProp);
+                    properties.put(noteCol, noteProp);
                 }
 
                 payload.put("properties", properties);
