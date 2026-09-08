@@ -15,10 +15,12 @@ import com.google.android.gms.tasks.*;
 import com.google.mlkit.vision.text.TextRecognizer;
 
 public class MainActivity extends Activity {
+    LinearLayout mainLayout;
     ScrollView scroll;
-    LinearLayout root;
+    LinearLayout contentLayout;
     LinearLayout tab0Body, tab1Body, tab2Body;
     Button btnTab0, btnTab1, btnTab2;
+    Button btnPickTop;
     TextView status;
     ProgressBar progress;
     TextRecognizer engine;
@@ -34,76 +36,79 @@ public class MainActivity extends Activity {
         engine = Ocr.create();
         notionSettings = new NotionSettings(this);
 
+        // Main Root: Vertical LinearLayout containing Fixed Top Bar + Scrollable Content
+        mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setBackgroundColor(Ui.COLOR_BG);
+        mainLayout.setFitsSystemWindows(true);
+
+        // 1. Scrollable Body Area (화면 상단부터 채우고 스크롤 가능)
         scroll = new ScrollView(this);
         scroll.setBackgroundColor(Ui.COLOR_BG);
         scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
+        scroll.setLayoutParams(scrollLp);
 
-        root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        int pad = Ui.dp(this, 16);
-        root.setPadding(pad, pad * 2, pad, pad * 2);
-        scroll.addView(root);
-        setContentView(scroll);
+        contentLayout = new LinearLayout(this);
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
+        int padH = Ui.dp(this, 16);
+        int padTop = Ui.dp(this, 28);
+        int padBottom = Ui.dp(this, 36);
+        contentLayout.setPadding(padH, padTop, padH, padBottom);
+        scroll.addView(contentLayout);
+        mainLayout.addView(scroll);
 
-        initUi();
-    }
+        // 2. Bottom Fixed Navigation Bar (화면 최하단에 항상 고정)
+        LinearLayout bottomFixedBar = new LinearLayout(this);
+        bottomFixedBar.setOrientation(LinearLayout.HORIZONTAL);
+        bottomFixedBar.setGravity(Gravity.CENTER_VERTICAL);
+        bottomFixedBar.setBackground(Ui.roundedRect(Color.WHITE, Color.parseColor("#E2E8F0"), 0, 1));
+        int barPadH = Ui.dp(this, 12);
+        int barPadV = Ui.dp(this, 10);
+        bottomFixedBar.setPadding(barPadH, barPadV, barPadH, barPadV);
+        bottomFixedBar.setElevation(Ui.dp(this, 8));
 
-    void initUi() {
-        root.removeAllViews();
+        // Segmented Tabs Container
+        LinearLayout tabBar = new LinearLayout(this);
+        tabBar.setOrientation(LinearLayout.HORIZONTAL);
+        tabBar.setBackground(Ui.roundedRect(Color.parseColor("#F1F5F9"), Color.TRANSPARENT, 10, 0));
+        int tbPad = Ui.dp(this, 3);
+        tabBar.setPadding(tbPad, tbPad, tbPad, tbPad);
+        LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        tbLp.setMargins(0, 0, Ui.dp(this, 8), 0);
+        tabBar.setLayoutParams(tbLp);
 
-        // 1. Top Header Bar (App Title + Right Action Button)
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, 0, 0, Ui.dp(this, 12));
+        btnTab0 = createTabButton("🧾 정산 품목", 0);
+        btnTab1 = createTabButton("📷 영수증 사진", 1);
+        btnTab2 = createTabButton("⚙️ 설정", 2);
 
-        LinearLayout titles = new LinearLayout(this);
-        titles.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-        titles.setLayoutParams(titleLp);
+        tabBar.addView(btnTab0);
+        tabBar.addView(btnTab1);
+        tabBar.addView(btnTab2);
+        bottomFixedBar.addView(tabBar);
 
-        TextView appTitle = Ui.text(this, "DutchPay OCR", 22);
-        appTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-        titles.addView(appTitle);
-
-        TextView appSub = Ui.text(this, "온디바이스 NPU 영수증 정산 · Notion 연동", 12);
-        appSub.setTextColor(Ui.COLOR_TEXT_MUTED);
-        titles.addView(appSub);
-        topBar.addView(titles);
-
-        // Always-accessible "📷 새 영수증" Button in top bar
-        Button btnPickTop = new Button(this);
-        btnPickTop.setText("📷 새 영수증");
+        // Always-accessible "＋ 새 영수증" Bottom Action Button
+        btnPickTop = new Button(this);
+        btnPickTop.setText("＋ 새 영수증");
         btnPickTop.setTextSize(13);
         btnPickTop.setTypeface(null, android.graphics.Typeface.BOLD);
         btnPickTop.setTextColor(Color.WHITE);
         btnPickTop.setBackground(Ui.roundedRect(Ui.COLOR_PRIMARY, Ui.COLOR_PRIMARY, 10, 0));
         btnPickTop.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
         btnPickTop.setOnClickListener(v -> pickReceiptPhoto());
-        topBar.addView(btnPickTop);
-        root.addView(topBar);
+        bottomFixedBar.addView(btnPickTop);
 
-        // 2. Segmented Tab Bar (Toss / iOS Style)
-        LinearLayout tabBar = new LinearLayout(this);
-        tabBar.setOrientation(LinearLayout.HORIZONTAL);
-        tabBar.setBackground(Ui.roundedRect(Color.parseColor("#E2E8F0"), Color.TRANSPARENT, 12, 0));
-        int tbPad = Ui.dp(this, 4);
-        tabBar.setPadding(tbPad, tbPad, tbPad, tbPad);
-        LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        tbLp.setMargins(0, 0, 0, Ui.dp(this, 14));
-        tabBar.setLayoutParams(tbLp);
+        mainLayout.addView(bottomFixedBar);
 
-        btnTab0 = createTabButton("🧾 정산 품목", 0);
-        btnTab1 = createTabButton("📷 원본 영수증", 1);
-        btnTab2 = createTabButton("⚙️ 설정 / NPU", 2);
+        setContentView(mainLayout);
 
-        tabBar.addView(btnTab0);
-        tabBar.addView(btnTab1);
-        tabBar.addView(btnTab2);
-        root.addView(tabBar);
+        initUi();
+    }
 
-        // 3. Tab Body Containers
+    void initUi() {
+        contentLayout.removeAllViews();
+
         tab0Body = new LinearLayout(this);
         tab0Body.setOrientation(LinearLayout.VERTICAL);
 
@@ -113,11 +118,10 @@ public class MainActivity extends Activity {
         tab2Body = new LinearLayout(this);
         tab2Body.setOrientation(LinearLayout.VERTICAL);
 
-        root.addView(tab0Body);
-        root.addView(tab1Body);
-        root.addView(tab2Body);
+        contentLayout.addView(tab0Body);
+        contentLayout.addView(tab1Body);
+        contentLayout.addView(tab2Body);
 
-        // Populate initial tabs
         buildTab0Initial();
         buildTab1Initial();
         buildTab2();
@@ -128,7 +132,7 @@ public class MainActivity extends Activity {
     private Button createTabButton(String title, int tabIndex) {
         Button b = new Button(this);
         b.setText(title);
-        b.setTextSize(13);
+        b.setTextSize(12);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
         b.setLayoutParams(lp);
         b.setOnClickListener(v -> switchTab(tabIndex));
@@ -138,15 +142,16 @@ public class MainActivity extends Activity {
     void switchTab(int index) {
         currentTab = index;
 
-        // Update tab button styles
         updateTabButtonStyle(btnTab0, index == 0);
         updateTabButtonStyle(btnTab1, index == 1);
         updateTabButtonStyle(btnTab2, index == 2);
 
-        // Toggle container visibility
         tab0Body.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         tab1Body.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
         tab2Body.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
+
+        // 사진 탭 전환 시 맨 위로 스크롤
+        scroll.smoothScrollTo(0, 0);
     }
 
     private void updateTabButtonStyle(Button b, boolean active) {
@@ -159,41 +164,58 @@ public class MainActivity extends Activity {
             b.setTextColor(Color.parseColor("#64748B"));
             b.setBackground(Ui.roundedRect(Color.TRANSPARENT, Color.TRANSPARENT, 8, 0));
         }
-        b.setPadding(Ui.dp(this, 8), Ui.dp(this, 8), Ui.dp(this, 8), Ui.dp(this, 8));
+        b.setPadding(Ui.dp(this, 6), Ui.dp(this, 7), Ui.dp(this, 6), Ui.dp(this, 7));
     }
 
     void buildTab0Initial() {
         tab0Body.removeAllViews();
 
-        // Hero Card
+        // 넉넉하고 편안한 상단 여백과 완성도 높은 Hero 카드
         LinearLayout hero = Ui.card(this);
-        hero.setPadding(Ui.dp(this, 20), Ui.dp(this, 24), Ui.dp(this, 20), Ui.dp(this, 24));
+        hero.setPadding(Ui.dp(this, 24), Ui.dp(this, 36), Ui.dp(this, 24), Ui.dp(this, 36));
+        hero.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams heroLp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        heroLp.setMargins(0, Ui.dp(this, 40), 0, Ui.dp(this, 18));
+        hero.setLayoutParams(heroLp);
 
-        TextView heroTitle = Ui.text(this, "영수증 사진을 선택하세요", 18);
-        heroTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-        hero.addView(heroTitle);
+        TextView tvIcon = Ui.text(this, "🧾", 48);
+        tvIcon.setGravity(Gravity.CENTER);
+        hero.addView(tvIcon);
 
-        TextView heroDesc = Ui.text(this,
-            "오프라인 온디바이스 NPU 신경망 엔진이 영수증 내 품목명, 단가, 수량, 할인 내역을 정밀하게 추출하고 영수증 원본 크롭과 대조합니다.", 14);
-        heroDesc.setTextColor(Ui.COLOR_TEXT_MUTED);
-        heroDesc.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 18));
-        hero.addView(heroDesc);
+        TextView tvTitle = Ui.text(this, "영수증을 선택해 주세요", 19);
+        tvTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvTitle.setTextColor(Ui.COLOR_TEXT_MAIN);
+        tvTitle.setGravity(Gravity.CENTER);
+        tvTitle.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 6));
+        hero.addView(tvTitle);
 
-        Button btnPick = Ui.button(this, "📷  영수증 사진 선택", Ui.COLOR_PRIMARY, Color.WHITE, this::pickReceiptPhoto);
+        TextView tvSub = Ui.text(this, "갤러리에서 영수증 사진을 불러오면\n품목과 금액을 자동으로 인식하여 정산표를 생성합니다.", 13);
+        tvSub.setTextColor(Ui.COLOR_TEXT_MUTED);
+        tvSub.setGravity(Gravity.CENTER);
+        tvSub.setLineSpacing(Ui.dp(this, 4), 1.0f);
+        tvSub.setPadding(0, 0, 0, Ui.dp(this, 24));
+        hero.addView(tvSub);
+
+        Button btnPick = Ui.button(this, "📷  영수증 사진 선택하기", Ui.COLOR_PRIMARY, Color.WHITE, this::pickReceiptPhoto);
+        btnPick.setTextSize(15);
+        btnPick.setTypeface(null, android.graphics.Typeface.BOLD);
+        btnPick.setPadding(Ui.dp(this, 24), Ui.dp(this, 14), Ui.dp(this, 24), Ui.dp(this, 14));
         hero.addView(btnPick);
+
         tab0Body.addView(hero);
 
-        // Status & Progress Card
         LinearLayout statusCard = Ui.card(this);
+        statusCard.setPadding(Ui.dp(this, 16), Ui.dp(this, 12), Ui.dp(this, 16), Ui.dp(this, 12));
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progress.setIndeterminate(true);
         progress.setVisibility(View.GONE);
         statusCard.addView(progress);
 
-        status = Ui.text(this, "대기 중 · 준비 완료", 13);
+        status = Ui.text(this, "준비 완료", 13);
         status.setTextColor(Ui.COLOR_TEXT_MUTED);
         status.setGravity(Gravity.CENTER);
-        status.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6));
+        status.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
         statusCard.addView(status);
         tab0Body.addView(statusCard);
     }
@@ -201,20 +223,28 @@ public class MainActivity extends Activity {
     void buildTab1Initial() {
         tab1Body.removeAllViews();
         LinearLayout emptyCard = Ui.card(this);
-        emptyCard.setPadding(Ui.dp(this, 24), Ui.dp(this, 32), Ui.dp(this, 24), Ui.dp(this, 32));
+        emptyCard.setPadding(Ui.dp(this, 24), Ui.dp(this, 36), Ui.dp(this, 24), Ui.dp(this, 36));
         emptyCard.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams emptyLp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        emptyLp.setMargins(0, Ui.dp(this, 40), 0, Ui.dp(this, 20));
+        emptyCard.setLayoutParams(emptyLp);
 
-        TextView tvEmptyIcon = Ui.text(this, "📷", 36);
+        TextView tvEmptyIcon = Ui.text(this, "📷", 48);
         tvEmptyIcon.setGravity(Gravity.CENTER);
         emptyCard.addView(tvEmptyIcon);
 
-        TextView tvEmpty = Ui.text(this, "영수증 사진을 선택하면\n전체 원본 사진과 OCR 추출 원문이 이곳에 표시됩니다.", 14);
-        tvEmpty.setTextColor(Ui.COLOR_TEXT_MUTED);
-        tvEmpty.setGravity(Gravity.CENTER);
-        tvEmpty.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 16));
-        emptyCard.addView(tvEmpty);
+        TextView tvEmptyTitle = Ui.text(this, "선택된 영수증이 없습니다", 17);
+        tvEmptyTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvEmptyTitle.setTextColor(Ui.COLOR_TEXT_MAIN);
+        tvEmptyTitle.setGravity(Gravity.CENTER);
+        tvEmptyTitle.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 20));
+        emptyCard.addView(tvEmptyTitle);
 
-        Button btnSelect = Ui.button(this, "영수증 사진 선택", Ui.COLOR_PRIMARY, Color.WHITE, this::pickReceiptPhoto);
+        Button btnSelect = Ui.button(this, "영수증 사진 선택하기", Ui.COLOR_PRIMARY, Color.WHITE, this::pickReceiptPhoto);
+        btnSelect.setTextSize(15);
+        btnSelect.setTypeface(null, android.graphics.Typeface.BOLD);
+        btnSelect.setPadding(Ui.dp(this, 24), Ui.dp(this, 14), Ui.dp(this, 24), Ui.dp(this, 14));
         emptyCard.addView(btnSelect);
         tab1Body.addView(emptyCard);
     }
@@ -222,33 +252,11 @@ public class MainActivity extends Activity {
     void buildTab2() {
         tab2Body.removeAllViews();
 
-        // 1. Hardware Acceleration Status Card
-        LinearLayout npuCard = Ui.card(this);
-        npuCard.setPadding(Ui.dp(this, 18), Ui.dp(this, 18), Ui.dp(this, 18), Ui.dp(this, 18));
-
-        TextView tvNpuTitle = Ui.text(this, "⚡ 온디바이스 신경망 가속 상태", 16);
-        tvNpuTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-        tvNpuTitle.setTextColor(Ui.COLOR_TEXT_MAIN);
-        npuCard.addView(tvNpuTitle);
-
-        TextView npuBadge = Ui.badge(this, "✓ NPU / NNAPI 하드웨어 가속 활성화됨", Color.parseColor("#ECFDF5"), Color.parseColor("#059669"));
-        npuBadge.setPadding(Ui.dp(this, 8), Ui.dp(this, 4), Ui.dp(this, 8), Ui.dp(this, 4));
-        LinearLayout.LayoutParams nbLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        nbLp.setMargins(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
-        npuBadge.setLayoutParams(nbLp);
-        npuCard.addView(npuBadge);
-
-        TextView tvNpuDesc = Ui.text(this,
-            "ONNX Runtime 기반 모바일 신경망 추론이 디바이스의 NPU(신경망 프로세서) 또는 GPU를 통해 로컬에서 즉시 수행되며, 외부 서버 전송 없이 100% 프라이버시가 보호됩니다.", 13);
-        tvNpuDesc.setTextColor(Ui.COLOR_TEXT_MUTED);
-        npuCard.addView(tvNpuDesc);
-        tab2Body.addView(npuCard);
-
-        // 2. Notion Integration Settings Card
+        // 1. Notion Integration Settings Card
         LinearLayout notionCard = Ui.card(this);
         notionCard.setPadding(Ui.dp(this, 18), Ui.dp(this, 18), Ui.dp(this, 18), Ui.dp(this, 18));
 
-        TextView tvNotionTitle = Ui.text(this, "📝 Notion 데이터베이스 연동 설정", 16);
+        TextView tvNotionTitle = Ui.text(this, "📝 Notion 연동 설정", 16);
         tvNotionTitle.setTypeface(null, android.graphics.Typeface.BOLD);
         tvNotionTitle.setTextColor(Ui.COLOR_TEXT_MAIN);
         notionCard.addView(tvNotionTitle);
@@ -263,7 +271,7 @@ public class MainActivity extends Activity {
         notionStatusBadge.setLayoutParams(nsbLp);
         notionCard.addView(notionStatusBadge);
 
-        TextView lblKey = Ui.text(this, "Notion API Key (시크릿 키)", 12);
+        TextView lblKey = Ui.text(this, "Notion API Key", 12);
         lblKey.setTypeface(null, android.graphics.Typeface.BOLD);
         lblKey.setTextColor(Color.parseColor("#475569"));
         notionCard.addView(lblKey);
@@ -272,13 +280,13 @@ public class MainActivity extends Activity {
         etApiKey.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
         notionCard.addView(etApiKey);
 
-        TextView lblDb = Ui.text(this, "Database ID (32자리 데이터베이스 고유 ID)", 12);
+        TextView lblDb = Ui.text(this, "Database ID", 12);
         lblDb.setTypeface(null, android.graphics.Typeface.BOLD);
         lblDb.setTextColor(Color.parseColor("#475569"));
         lblDb.setPadding(0, Ui.dp(this, 8), 0, 0);
         notionCard.addView(lblDb);
 
-        EditText etDbId = Ui.input(this, "예: 12345678123412341234123456789abc", notionSettings.getDatabaseId(), false);
+        EditText etDbId = Ui.input(this, "데이터베이스 32자리 ID", notionSettings.getDatabaseId(), false);
         etDbId.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
         notionCard.addView(etDbId);
 
@@ -307,7 +315,7 @@ public class MainActivity extends Activity {
             }
             notionSettings.saveConfig(key, db, "이름", "금액", "날짜", "비고");
             ProgressDialog testPd = new ProgressDialog(this);
-            testPd.setMessage("Notion 데이터베이스 연결을 확인하고 있습니다…");
+            testPd.setMessage("Notion 연결을 확인하고 있습니다…");
             testPd.show();
 
             NotionClient.testConnection(notionSettings, new NotionClient.Callback() {
@@ -350,62 +358,53 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onActivityResult(int req, int code, Intent data) {
-        super.onActivityResult(req, code, data);
-        if (req != 1 || code != RESULT_OK || data == null) return;
-        int current = ++scanId;
-        Uri uri = data.getData();
+    protected void onActivityResult(int req, int res, Intent data) {
+        if (req == 1 && res == RESULT_OK && data != null && data.getData() != null) {
+            handlePhoto(data.getData());
+        }
+    }
+
+    void handlePhoto(Uri uri) {
         currentUri = uri;
+        final int id = ++scanId;
+        tab0Body.removeAllViews();
+        progress.setVisibility(View.VISIBLE);
+        status.setText("영수증을 분석하고 있습니다…");
+
+        LinearLayout loadingCard = Ui.card(this);
+        loadingCard.addView(progress);
+        loadingCard.addView(status);
+        tab0Body.addView(loadingCard);
 
         switchTab(0);
-        buildTab0Initial();
-        if (progress != null) progress.setVisibility(View.VISIBLE);
-        status.setText("영수증과 품목 영역을 읽고 있습니다 (NPU 가속)…");
 
         try {
-            PaddleScan.read(this, uri).continueWithTask(task -> {
-                if (task.isSuccessful()) return Tasks.forResult(task.getResult());
-                if (current != scanId || isDestroyed()) return Tasks.forException(new IllegalStateException("Scan was replaced"));
-                status.setText("한국어 OCR을 다시 읽고 있습니다…");
-                return Scan.read(this, uri, engine).continueWith(fallback -> {
-                    if (!fallback.isSuccessful()) throw fallback.getException();
-                    Receipt r = fallback.getResult();
-                    r.method = "ML Kit 대체 인식 · " + r.method;
-                    return r;
-                });
-            }).addOnSuccessListener(this, receipt -> {
-                if (current != scanId) return;
+            Scan.read(this, uri, engine).addOnCompleteListener(task -> {
+                if (id != scanId) return;
+                if (!task.isSuccessful() || task.getResult() == null) {
+                    status.setText("인식 실패: 다시 시도해 주세요.");
+                    progress.setVisibility(View.GONE);
+                    return;
+                }
+
+                Receipt receipt = task.getResult();
                 currentReceipt = receipt;
+
                 tab0Body.removeAllViews();
                 new ReceiptEditor(this, tab0Body, tab1Body, receipt, uri, notionSettings,
                     () -> switchTab(1),
                     () -> switchTab(0)
                 );
-                switchTab(0);
-            }).addOnFailureListener(this, e -> {
-                if (current == scanId) {
-                    if (progress != null) progress.setVisibility(View.GONE);
-                    status.setText("인식 실패: 사진을 다시 선택하세요. " + e.getMessage());
-                }
             });
-        } catch (Exception e) {
-            if (progress != null) progress.setVisibility(View.GONE);
-            status.setText("사진을 열 수 없습니다: " + e.getMessage());
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (currentTab != 0) {
-            switchTab(0);
-        } else {
-            super.onBackPressed();
+        } catch (java.io.IOException e) {
+            status.setText("이미지를 불러올 수 없습니다.");
+            progress.setVisibility(View.GONE);
         }
     }
 
     @Override
     protected void onDestroy() {
-        engine.close();
         super.onDestroy();
+        if (engine != null) engine.close();
     }
 }

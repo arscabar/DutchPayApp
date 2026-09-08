@@ -24,10 +24,10 @@ public final class NotionClient {
     }
 
     public static void testConnection(NotionSettings settings, Callback callback) {
-        createPage(settings, "DutchPay OCR 연동 테스트", 0, "", "노션 데이터베이스 연동 테스트 성공입니다.", callback);
+        createPage(settings, "DutchPay OCR 연동 테스트", 0, "", "노션 데이터베이스 연동 테스트 성공입니다.", "테스트", callback);
     }
 
-    public static void createPage(NotionSettings settings, String title, long amount, String date, String note, Callback callback) {
+    public static void createPage(NotionSettings settings, String title, long amount, String date, String note, String category, Callback callback) {
         if (!settings.isConfigured()) {
             callback.onError("노션 연동이 설정되지 않았습니다. 우측 상단 ⚙️ 설정에서 API Key와 데이터베이스 ID를 입력하세요.");
             return;
@@ -40,6 +40,8 @@ public final class NotionClient {
                 String amountCol = settings.getPropAmount();
                 String dateCol = settings.getPropDate();
                 String noteCol = settings.getPropNote();
+                String catCol = settings.getPropCategory();
+                boolean catIsSelect = false;
                 String placeCol = null;
 
                 // Dynamically discover database properties if needed
@@ -67,10 +69,13 @@ public final class NotionClient {
                                     String type = pObj.optString("type");
                                     if ("title".equals(type)) {
                                         titleCol = k;
-                                    } else if ("number".equals(type) && (amountCol.isEmpty() || "금액".equals(amountCol) || k.contains("금액") || k.contains("비용"))) {
+                                    } else if ("number".equals(type) && (amountCol.isEmpty() || "금액".equals(amountCol) || k.contains("금액") || k.contains("비용") || k.contains("가격"))) {
                                         amountCol = k;
                                     } else if ("date".equals(type) && (dateCol.isEmpty() || "날짜".equals(dateCol) || k.contains("날짜") || k.contains("일시"))) {
                                         dateCol = k;
+                                    } else if ("select".equals(type) && (catCol.isEmpty() || "범주".equals(catCol) || k.contains("범주") || k.contains("카테고리") || k.contains("분류"))) {
+                                        catCol = k;
+                                        catIsSelect = true;
                                     } else if ("rich_text".equals(type)) {
                                         if (k.contains("비고") || k.contains("내역") || k.contains("메모")) {
                                             noteCol = k;
@@ -79,7 +84,10 @@ public final class NotionClient {
                                         }
                                     }
                                 }
-                                settings.saveConfig(settings.getApiKey(), settings.getDatabaseId(), titleCol, amountCol, dateCol, noteCol);
+                                if (props.has(catCol)) {
+                                    catIsSelect = "select".equals(props.optJSONObject(catCol).optString("type"));
+                                }
+                                settings.saveConfig(settings.getApiKey(), settings.getDatabaseId(), titleCol, amountCol, dateCol, noteCol, catCol);
                             }
                         }
                     }
@@ -133,6 +141,21 @@ public final class NotionClient {
                         dateProp.put("date", dateVal);
                         properties.put(dateCol, dateProp);
                     }
+                }
+
+                // Category
+                if (catCol != null && !catCol.isEmpty() && category != null && !category.isEmpty()) {
+                    JSONObject catProp = new JSONObject();
+                    if (catIsSelect) {
+                        catProp.put("select", new JSONObject().put("name", category));
+                    } else {
+                        JSONArray catArr = new JSONArray();
+                        JSONObject catText = new JSONObject();
+                        catText.put("text", new JSONObject().put("content", category));
+                        catArr.put(catText);
+                        catProp.put("rich_text", catArr);
+                    }
+                    properties.put(catCol, catProp);
                 }
 
                 // Note / Details (rich_text, chunked by 1800 chars for Notion API limits)
@@ -218,3 +241,4 @@ public final class NotionClient {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(new Date());
     }
 }
+

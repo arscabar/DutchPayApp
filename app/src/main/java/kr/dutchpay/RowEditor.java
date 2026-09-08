@@ -23,8 +23,8 @@ final class RowEditor extends LinearLayout {
         super(c);
         setOrientation(VERTICAL);
         setBackgroundColor(Color.TRANSPARENT);
-        int padH = Ui.dp(c, 4);
-        int padV = Ui.dp(c, 8);
+        int padH = Ui.dp(c, 2);
+        int padV = Ui.dp(c, 10);
         setPadding(padH, padV, padH, padV);
 
         LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
@@ -35,7 +35,7 @@ final class RowEditor extends LinearLayout {
         String issue = Receipt.issue(item);
 
         // ============================================================
-        // 1. TOSS-STYLE COMPACT LIST ROW (기본 1줄 요약)
+        // 1. TOSS-STYLE CLEAN & DYNAMIC COMPACT LIST ROW
         // ============================================================
         LinearLayout compactRow = new LinearLayout(c);
         compactRow.setOrientation(HORIZONTAL);
@@ -45,53 +45,49 @@ final class RowEditor extends LinearLayout {
         selected.setChecked(true);
         compactRow.addView(selected);
 
+        // Center Info Column (가변 너비: 텍스트가 길어도 우측 금액과 겹치지 않고 자연스럽게 확장/줄바꿈)
         LinearLayout infoCol = new LinearLayout(c);
         infoCol.setOrientation(VERTICAL);
         LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-        infoLp.setMargins(Ui.dp(c, 4), 0, 0, 0);
+        infoLp.setMargins(Ui.dp(c, 8), 0, Ui.dp(c, 12), 0);
         infoCol.setLayoutParams(infoLp);
-
-        LinearLayout nameRow = new LinearLayout(c);
-        nameRow.setOrientation(HORIZONTAL);
-        nameRow.setGravity(Gravity.CENTER_VERTICAL);
 
         tvNameDisplay = Ui.text(c, item.name, 15);
         tvNameDisplay.setTypeface(null, android.graphics.Typeface.BOLD);
         tvNameDisplay.setTextColor(Ui.COLOR_TEXT_MAIN);
-        nameRow.addView(tvNameDisplay);
+        tvNameDisplay.setMaxLines(2);
+        tvNameDisplay.setEllipsize(TextUtils.TruncateAt.END);
+        infoCol.addView(tvNameDisplay);
+
+        // Sub Info Row: 수량 · 단가 정보
+        LinearLayout subRow = new LinearLayout(c);
+        subRow.setOrientation(HORIZONTAL);
+        subRow.setGravity(Gravity.CENTER_VERTICAL);
+        subRow.setPadding(0, Ui.dp(c, 3), 0, 0);
+
+        tvSubInfo = Ui.text(c, formatSubInfo(), 13);
+        tvSubInfo.setTextColor(issue.isEmpty() ? Ui.COLOR_TEXT_MUTED : Ui.COLOR_WARNING);
+        subRow.addView(tvSubInfo);
 
         if (item.originalName != null && !item.originalName.isEmpty() && !item.originalName.equals(item.name)) {
-            TextView autoBadge = Ui.badge(c, "보정", Color.parseColor("#E8F5E9"), Color.parseColor("#2E7D32"));
+            TextView autoBadge = Ui.badge(c, "자동보정", Color.parseColor("#E8F5E9"), Color.parseColor("#2E7D32"));
             autoBadge.setTextSize(10);
             autoBadge.setPadding(Ui.dp(c, 5), Ui.dp(c, 1), Ui.dp(c, 5), Ui.dp(c, 1));
             LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             bLp.setMargins(Ui.dp(c, 6), 0, 0, 0);
             autoBadge.setLayoutParams(bLp);
-            nameRow.addView(autoBadge);
+            subRow.addView(autoBadge);
         }
 
-        if (item.crop != null) {
-            TextView cropBadge = Ui.badge(c, "📷 영수증", Color.parseColor("#F1F5F9"), Color.parseColor("#475569"));
-            cropBadge.setTextSize(10);
-            cropBadge.setPadding(Ui.dp(c, 5), Ui.dp(c, 1), Ui.dp(c, 5), Ui.dp(c, 1));
-            LinearLayout.LayoutParams cbLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            cbLp.setMargins(Ui.dp(c, 4), 0, 0, 0);
-            cropBadge.setLayoutParams(cbLp);
-            nameRow.addView(cropBadge);
-        }
-        infoCol.addView(nameRow);
-
-        tvSubInfo = Ui.text(c, formatSubInfo(), 12);
-        tvSubInfo.setTextColor(issue.isEmpty() ? Ui.COLOR_TEXT_MUTED : Ui.COLOR_WARNING);
-        tvSubInfo.setPadding(0, Ui.dp(c, 2), 0, 0);
-        infoCol.addView(tvSubInfo);
+        infoCol.addView(subRow);
         compactRow.addView(infoCol);
 
+        // Right Column: 금액 & 토글 아이콘 (절대 찌그러지지 않도록 WRAP_CONTENT 고정)
         LinearLayout rightCol = new LinearLayout(c);
         rightCol.setOrientation(HORIZONTAL);
         rightCol.setGravity(Gravity.CENTER_VERTICAL);
 
-        result = Ui.text(c, "", 15);
+        result = Ui.text(c, "", 16);
         result.setTypeface(null, android.graphics.Typeface.BOLD);
         result.setTextColor(Ui.COLOR_TEXT_MAIN);
         result.setGravity(Gravity.END);
@@ -106,7 +102,7 @@ final class RowEditor extends LinearLayout {
         addView(compactRow);
 
         // ============================================================
-        // 2. POLISHED ACCORDION CARD (예쁘고 정돈된 세부 편집 카드)
+        // 2. POLISHED ACCORDION CARD (펼쳤을 때 나타나는 세부 편집 카드)
         // ============================================================
         detailLayout = new LinearLayout(c);
         detailLayout.setOrientation(VERTICAL);
@@ -116,219 +112,109 @@ final class RowEditor extends LinearLayout {
         detailLayout.setPadding(dPad, dPad, dPad, dPad);
         LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        dLp.setMargins(0, Ui.dp(c, 6), 0, Ui.dp(c, 4));
+        dLp.setMargins(0, Ui.dp(c, 8), 0, Ui.dp(c, 4));
         detailLayout.setLayoutParams(dLp);
 
-        // 2-0. 영수증 원본 크롭 카드 (영수증 인쇄본 대조 확인)
-        if (item.crop != null) {
-            LinearLayout cropCard = new LinearLayout(c);
-            cropCard.setOrientation(VERTICAL);
-            cropCard.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 10, 1));
-            int cPad = Ui.dp(c, 10);
-            cropCard.setPadding(cPad, cPad, cPad, cPad);
-            LinearLayout.LayoutParams cropLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            cropLp.setMargins(0, 0, 0, Ui.dp(c, 12));
-            cropCard.setLayoutParams(cropLp);
+        // 1. 품목명 편집
+        TextView tvEditLabel = Ui.text(c, "품목명 수정", 12);
+        tvEditLabel.setTextColor(Ui.COLOR_TEXT_MUTED);
+        detailLayout.addView(tvEditLabel);
 
-            LinearLayout cropHeader = new LinearLayout(c);
-            cropHeader.setOrientation(HORIZONTAL);
-            cropHeader.setGravity(Gravity.CENTER_VERTICAL);
-
-            TextView lblCrop = Ui.text(c, "📷 원본 영수증 인쇄 크롭", 12);
-            lblCrop.setTypeface(null, android.graphics.Typeface.BOLD);
-            lblCrop.setTextColor(Color.parseColor("#475569"));
-            LinearLayout.LayoutParams lblLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-            lblCrop.setLayoutParams(lblLp);
-            cropHeader.addView(lblCrop);
-
-            TextView btnZoom = Ui.text(c, "🔍 크게 보기", 12);
-            btnZoom.setTextColor(Color.parseColor("#2563EB"));
-            btnZoom.setTypeface(null, android.graphics.Typeface.BOLD);
-            btnZoom.setPadding(Ui.dp(c, 6), Ui.dp(c, 2), Ui.dp(c, 6), Ui.dp(c, 2));
-            btnZoom.setOnClickListener(v -> showZoomDialog(c, item));
-            cropHeader.addView(btnZoom);
-            cropCard.addView(cropHeader);
-
-            ImageView ivCrop = new ImageView(c);
-            ivCrop.setImageBitmap(item.crop);
-            ivCrop.setAdjustViewBounds(true);
-            ivCrop.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            ivCrop.setPadding(0, Ui.dp(c, 6), 0, Ui.dp(c, 2));
-            ivCrop.setOnClickListener(v -> showZoomDialog(c, item));
-            cropCard.addView(ivCrop);
-
-            detailLayout.addView(cropCard);
-        }
-
-        // 2-1. 품목명 입력란
-        TextView lblName = Ui.text(c, "품목명", 12);
-        lblName.setTypeface(null, android.graphics.Typeface.BOLD);
-        lblName.setTextColor(Color.parseColor("#475569"));
-        detailLayout.addView(lblName);
-
-        name = Ui.input(c, "품목명 입력", item.name, false);
-        name.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
+        name = Ui.input(c, "품목명", item.name, false);
         detailLayout.addView(name);
 
-        // 2-2. 대안 후보 칩 목록 (가로 스크롤 가능한 세련된 알약 칩)
-        LinkedHashSet<String> candidateSet = new LinkedHashSet<>();
-        if (item.originalName != null && !item.originalName.trim().isEmpty()) candidateSet.add(item.originalName);
-        for (String cand : item.nameCandidates) {
-            if (cand != null && !cand.trim().isEmpty()) candidateSet.add(cand);
-        }
-        candidateSet.remove(item.name); // 현재 선택된 이름 제외
+        // 2. 단가 & 수량 조절 Row
+        LinearLayout qtyRow = new LinearLayout(c);
+        qtyRow.setOrientation(HORIZONTAL);
+        qtyRow.setGravity(Gravity.CENTER_VERTICAL);
 
-        if (!candidateSet.isEmpty()) {
-            HorizontalScrollView chipScroll = new HorizontalScrollView(c);
-            chipScroll.setHorizontalScrollBarEnabled(false);
-            LinearLayout chipRow = new LinearLayout(c);
-            chipRow.setOrientation(HORIZONTAL);
-            chipRow.setGravity(Gravity.CENTER_VERTICAL);
-            chipRow.setPadding(0, Ui.dp(c, 4), 0, Ui.dp(c, 10));
+        LinearLayout unitBox = new LinearLayout(c);
+        unitBox.setOrientation(VERTICAL);
+        LinearLayout.LayoutParams ubLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f);
+        ubLp.setMargins(0, 0, Ui.dp(c, 8), 0);
+        unitBox.setLayoutParams(ubLp);
 
-            TextView chipPrefix = Ui.text(c, "추천 후보: ", 12);
-            chipPrefix.setTextColor(Ui.COLOR_TEXT_MUTED);
-            chipRow.addView(chipPrefix);
+        TextView tvUnitLabel = Ui.text(c, "단가 (원)", 12);
+        tvUnitLabel.setTextColor(Ui.COLOR_TEXT_MUTED);
+        unitBox.addView(tvUnitLabel);
 
-            for (String cand : candidateSet) {
-                Button chip = new Button(c);
-                chip.setText(cand);
-                chip.setTextSize(12);
-                chip.setTextColor(Color.parseColor("#2563EB"));
-                chip.setBackground(Ui.roundedRect(Color.parseColor("#EFF6FF"), Color.parseColor("#BFDBFE"), 14, 1));
-                chip.setPadding(Ui.dp(c, 10), Ui.dp(c, 3), Ui.dp(c, 10), Ui.dp(c, 3));
-                LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                cLp.setMargins(0, 0, Ui.dp(c, 6), 0);
-                chip.setLayoutParams(cLp);
-                chip.setOnClickListener(v -> name.setText(cand));
-                chipRow.addView(chip);
-            }
-            chipScroll.addView(chipRow);
-            detailLayout.addView(chipScroll);
-        }
+        unit = Ui.input(c, "단가", String.valueOf(item.unit), true);
+        unitBox.addView(unit);
+        qtyRow.addView(unitBox);
 
-        // 2-3. 수량 통합 스텝퍼 (iOS/Toss 스타일의 일체형 [-] N개 [+] 바)
-        LinearLayout stepperContainer = new LinearLayout(c);
-        stepperContainer.setOrientation(HORIZONTAL);
-        stepperContainer.setGravity(Gravity.CENTER_VERTICAL);
-        stepperContainer.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
-        stepperContainer.setPadding(Ui.dp(c, 4), Ui.dp(c, 4), Ui.dp(c, 4), Ui.dp(c, 4));
-        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        scLp.setMargins(0, Ui.dp(c, 4), 0, Ui.dp(c, 12));
-        stepperContainer.setLayoutParams(scLp);
+        LinearLayout qtyBox = new LinearLayout(c);
+        qtyBox.setOrientation(VERTICAL);
+        LinearLayout.LayoutParams qbLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        qtyBox.setLayoutParams(qbLp);
+
+        TextView tvQtyLabel = Ui.text(c, "수량 (개)", 12);
+        tvQtyLabel.setTextColor(Ui.COLOR_TEXT_MUTED);
+        qtyBox.addView(tvQtyLabel);
+
+        LinearLayout stepBox = new LinearLayout(c);
+        stepBox.setOrientation(HORIZONTAL);
+        stepBox.setGravity(Gravity.CENTER_VERTICAL);
 
         Button btnMinus = new Button(c);
         btnMinus.setText("－");
-        btnMinus.setTextSize(16);
-        btnMinus.setTextColor(Color.parseColor("#1E293B"));
-        btnMinus.setBackground(Ui.roundedRect(Color.parseColor("#F1F5F9"), Color.TRANSPARENT, 6, 0));
-        int btnPad = Ui.dp(c, 12);
-        btnMinus.setPadding(btnPad, Ui.dp(c, 6), btnPad, Ui.dp(c, 6));
+        btnMinus.setTextSize(14);
+        btnMinus.setTextColor(Ui.COLOR_TEXT_MAIN);
+        btnMinus.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
+        int btnPad = Ui.dp(c, 6);
+        btnMinus.setPadding(btnPad, btnPad, btnPad, btnPad);
+        LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(Ui.dp(c, 36), Ui.dp(c, 40));
+        btnMinus.setLayoutParams(sLp);
         btnMinus.setOnClickListener(v -> adjustQty(-1));
-        stepperContainer.addView(btnMinus);
+        stepBox.addView(btnMinus);
 
-        TextView tvQtyLabel = Ui.text(c, "수량 조절 (1개 단위)", 13);
-        tvQtyLabel.setTextColor(Color.parseColor("#64748B"));
-        tvQtyLabel.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams qlLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-        tvQtyLabel.setLayoutParams(qlLp);
-        stepperContainer.addView(tvQtyLabel);
+        quantity = Ui.input(c, "수량", item.quantityKnown ? String.valueOf(Math.abs(item.count)) : "1", true);
+        quantity.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams qLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        qLp.setMargins(Ui.dp(c, 4), 0, Ui.dp(c, 4), 0);
+        quantity.setLayoutParams(qLp);
+        stepBox.addView(quantity);
 
         Button btnPlus = new Button(c);
         btnPlus.setText("＋");
-        btnPlus.setTextSize(16);
-        btnPlus.setTextColor(Color.parseColor("#1E293B"));
-        btnPlus.setBackground(Ui.roundedRect(Color.parseColor("#F1F5F9"), Color.TRANSPARENT, 6, 0));
-        btnPlus.setPadding(btnPad, Ui.dp(c, 6), btnPad, Ui.dp(c, 6));
+        btnPlus.setTextSize(14);
+        btnPlus.setTextColor(Ui.COLOR_TEXT_MAIN);
+        btnPlus.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
+        btnPlus.setPadding(btnPad, btnPad, btnPad, btnPad);
+        btnPlus.setLayoutParams(sLp);
         btnPlus.setOnClickListener(v -> adjustQty(1));
-        stepperContainer.addView(btnPlus);
-        detailLayout.addView(stepperContainer);
+        stepBox.addView(btnPlus);
 
-        // 2-4. 단가 | 수량 | 비율(%) 3열 그리드
-        LinearLayout grid = new LinearLayout(c);
-        grid.setOrientation(HORIZONTAL);
+        qtyBox.addView(stepBox);
+        qtyRow.addView(qtyBox);
+        detailLayout.addView(qtyRow);
 
-        LinearLayout uCol = new LinearLayout(c);
-        uCol.setOrientation(VERTICAL);
-        LinearLayout.LayoutParams uLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f);
-        uLp.setMargins(0, 0, Ui.dp(c, 6), 0);
-        uCol.setLayoutParams(uLp);
-        TextView lblU = Ui.text(c, "단가(원)", 11);
-        lblU.setTextColor(Ui.COLOR_TEXT_MUTED);
-        uCol.addView(lblU);
-        unit = Ui.input(c, "단가", "" + item.unit, true);
-        unit.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
-        uCol.addView(unit);
-        grid.addView(uCol);
+        // 3. 부담 비율 (더치페이 100%, 50% 등)
+        TextView tvPctLabel = Ui.text(c, "내 부담 비율 (%)", 12);
+        tvPctLabel.setTextColor(Ui.COLOR_TEXT_MUTED);
+        tvPctLabel.setPadding(0, Ui.dp(c, 4), 0, 0);
+        detailLayout.addView(tvPctLabel);
 
-        LinearLayout qCol = new LinearLayout(c);
-        qCol.setOrientation(VERTICAL);
-        LinearLayout.LayoutParams qLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-        qLp.setMargins(0, 0, Ui.dp(c, 6), 0);
-        qCol.setLayoutParams(qLp);
-        TextView lblQ = Ui.text(c, "수량", 11);
-        lblQ.setTextColor(Ui.COLOR_TEXT_MUTED);
-        qCol.addView(lblQ);
-        quantity = Ui.input(c, "수량", item.quantityKnown ? "" + Math.abs(item.count) : "", true);
-        quantity.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
-        qCol.addView(quantity);
-        grid.addView(qCol);
+        percent = Ui.input(c, "부담 비율 (%)", "100", true);
+        detailLayout.addView(percent);
 
-        LinearLayout pCol = new LinearLayout(c);
-        pCol.setOrientation(VERTICAL);
-        LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.9f);
-        pCol.setLayoutParams(pLp);
-        TextView lblP = Ui.text(c, "비율(%)", 11);
-        lblP.setTextColor(Ui.COLOR_TEXT_MUTED);
-        pCol.addView(lblP);
-        percent = Ui.input(c, "100", "100", true);
-        percent.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 8, 1));
-        pCol.addView(percent);
-        grid.addView(pCol);
-
-        detailLayout.addView(grid);
-
-        // 2-5. 비율 원터치 프리셋 버튼 [ 0% (제외) ] [ 50% (절반) ] [ 100% (전액) ]
-        LinearLayout presetRow = new LinearLayout(c);
-        presetRow.setOrientation(HORIZONTAL);
-        presetRow.setGravity(Gravity.CENTER_VERTICAL);
-        presetRow.setPadding(0, 0, 0, Ui.dp(c, 10));
-
-        TextView tvPre = Ui.text(c, "빠른 비율: ", 11);
-        tvPre.setTextColor(Ui.COLOR_TEXT_MUTED);
-        presetRow.addView(tvPre);
-
-        for (int pVal : new int[]{0, 50, 100}) {
-            Button pBtn = new Button(c);
-            pBtn.setText(pVal + "%");
-            pBtn.setTextSize(11);
-            pBtn.setTextColor(Color.parseColor("#475569"));
-            pBtn.setBackground(Ui.roundedRect(Color.WHITE, Ui.COLOR_STROKE, 6, 1));
-            pBtn.setPadding(Ui.dp(c, 8), Ui.dp(c, 2), Ui.dp(c, 8), Ui.dp(c, 2));
-            LinearLayout.LayoutParams pBLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            pBLp.setMargins(0, 0, Ui.dp(c, 6), 0);
-            pBtn.setLayoutParams(pBLp);
-            pBtn.setOnClickListener(v -> percent.setText(String.valueOf(pVal)));
-            presetRow.addView(pBtn);
-        }
-        detailLayout.addView(presetRow);
-
-        if (!issue.isEmpty()) {
-            TextView issueView = Ui.text(c, "⚠️ " + issue, 12);
-            issueView.setTextColor(Ui.COLOR_WARNING);
-            issueView.setPadding(0, 0, 0, Ui.dp(c, 4));
-            detailLayout.addView(issueView);
+        // 4. 원본 영수증 인쇄 영역 확인 버튼 (품목별 사진이 있는 경우에만 상세 카드 안에서 여유롭게 제공)
+        if (item.crop != null) {
+            Button btnCropZoom = Ui.subButton(c, "📷 이 품목 영수증 원본 사진 대조", () -> showZoomDialog(c, item));
+            btnCropZoom.setTextSize(13);
+            LinearLayout.LayoutParams czLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            czLp.setMargins(0, Ui.dp(c, 6), 0, Ui.dp(c, 6));
+            btnCropZoom.setLayoutParams(czLp);
+            detailLayout.addView(btnCropZoom);
         }
 
+        // 5. 검토 완료 체크박스
         reviewed = new CheckBox(c);
-        reviewed.setText("원본 대조 확인 완료");
+        reviewed.setText("항목 확인 완료");
+        reviewed.setTextColor(Color.parseColor("#991B1B"));
         reviewed.setTextSize(12);
-        reviewed.setTextColor(Ui.COLOR_TEXT_MUTED);
-        reviewed.setVisibility(issue.isEmpty() ? GONE : VISIBLE);
+        reviewed.setChecked(item.warning.isEmpty());
+        reviewed.setVisibility(item.warning.isEmpty() ? View.GONE : View.VISIBLE);
         detailLayout.addView(reviewed);
 
         Button btnClose = new Button(c);
@@ -412,15 +298,12 @@ final class RowEditor extends LinearLayout {
             return 0;
         }
 
-        // 비율이 비어있으면 0으로 자동 처리
         String pctStr = percent.getText().toString().trim();
         if (pctStr.isEmpty()) pctStr = "0";
 
-        // 수량이 비어있으면 0으로 자동 처리
         String qtyStr = quantity.getText().toString().trim();
         if (qtyStr.isEmpty()) qtyStr = source.quantityKnown ? "0" : "";
 
-        // 단가가 비어있으면 0으로 자동 처리
         String unitStr = unit.getText().toString().trim();
         long unitVal = 0;
         try {

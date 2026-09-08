@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.regex.*;
 
 final class ReceiptTotalText {
-    static final String LABEL="실결제금액|총결제금액|결제금액|받을금액|받은금액|청구금액|합계금액|합계|함계|총구매액|총금액|승인금액|카드결제금액|신용카드|카드결제|현금결제|현금|상품권|지역화폐|계좌이체|간편결제|카드|금액|계";
+    static final String LABEL="실결제금액|총결제금액|결제금액|받을금액|받은금액|청구금액|합계금액|합계|함계|총구매액|총금액|승인금액|카드결제금액|신용카드|카드결제|현금결제|현금|상품권|지역화폐|계좌이체|간편결제|카드|금액|매출합계|매출합계카드|계";
     static final Pattern MONEY=Pattern.compile("^("+LABEL+")(-?[0-9][0-9,.]*)(?:원)?(?:\\|([0-9][0-9,.]*원?))?");
     static final class Candidate {
         final long value; final int rank;

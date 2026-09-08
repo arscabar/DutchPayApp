@@ -17,14 +17,18 @@ final class Ui {
     static final int COLOR_BG = Color.parseColor("#F2F4F6");        // Toss soft gray
     static final int COLOR_CARD = Color.parseColor("#FFFFFF");      // White
     static final int COLOR_STROKE = Color.parseColor("#E5E8EB");    // Toss light border
+    static final int COLOR_STROKE_LIGHT = Color.parseColor("#F0F2F5");
     static final int COLOR_TEXT_MAIN = Color.parseColor("#191F28"); // Toss primary dark
     static final int COLOR_TEXT_MUTED = Color.parseColor("#8B95A1");// Toss secondary gray
+    static final int COLOR_TEXT_HINT = Color.parseColor("#B0B8C1");
     static final int COLOR_PRIMARY = Color.parseColor("#3182F6");   // Toss signature blue
     static final int COLOR_PRIMARY_HOVER = Color.parseColor("#1B64DA");
-    static final int COLOR_NOTION = Color.parseColor("#191F28");    // Sleek black
+    static final int COLOR_PRIMARY_LIGHT = Color.parseColor("#E8F3FF");
+    static final int COLOR_NOTION = Color.parseColor("#1F2328");    // Sleek Notion dark
+    static final int COLOR_NOTION_BG = Color.parseColor("#2F343B"); // Notion dark block
     static final int COLOR_SUCCESS = Color.parseColor("#059669");   // Emerald 600
-    static final int COLOR_SUCCESS_LIGHT = Color.parseColor("#E8F5E9");
-    static final int COLOR_WARNING = Color.parseColor("#F04452");   // Toss warning red/amber
+    static final int COLOR_SUCCESS_LIGHT = Color.parseColor("#E6F4EA");
+    static final int COLOR_WARNING = Color.parseColor("#F04452");   // Toss warning red
     static final int COLOR_WARNING_LIGHT = Color.parseColor("#FEECEE");
 
     static int dp(Context c, float dp) {
@@ -41,11 +45,15 @@ final class Ui {
     }
 
     static LinearLayout card(Context c) {
+        return card(c, 16);
+    }
+
+    static LinearLayout card(Context c, int radiusDp) {
         LinearLayout layout = new LinearLayout(c);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setBackground(roundedRect(COLOR_CARD, COLOR_STROKE, 14, 1));
+        layout.setBackground(roundedRect(COLOR_CARD, COLOR_STROKE, radiusDp, 1));
         layout.setElevation(dp(c, 2));
-        int pad = dp(c, 16);
+        int pad = dp(c, 18);
         layout.setPadding(pad, pad, pad, pad);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -73,6 +81,47 @@ final class Ui {
         return b;
     }
 
+    static TextView chip(Context c, String text, int bgColor, int textColor) {
+        TextView ch = new TextView(c);
+        ch.setText(text);
+        ch.setTextSize(13);
+        ch.setTextColor(textColor);
+        ch.setTypeface(null, android.graphics.Typeface.BOLD);
+        ch.setBackground(roundedRect(bgColor, COLOR_STROKE, 14, 1));
+        ch.setPadding(dp(c, 12), dp(c, 6), dp(c, 12), dp(c, 6));
+        return ch;
+    }
+
+    static View divider(Context c) {
+        View v = new View(c);
+        v.setBackgroundColor(COLOR_STROKE_LIGHT);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(c, 1));
+        lp.setMargins(0, dp(c, 12), 0, dp(c, 12));
+        v.setLayoutParams(lp);
+        return v;
+    }
+
+    static LinearLayout infoRow(Context c, String label, String value) {
+        LinearLayout row = new LinearLayout(c);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(c, 4), 0, dp(c, 4));
+
+        TextView tvLabel = text(c, label, 14);
+        tvLabel.setTextColor(COLOR_TEXT_MUTED);
+        LinearLayout.LayoutParams lpLabel = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        tvLabel.setLayoutParams(lpLabel);
+        row.addView(tvLabel);
+
+        TextView tvValue = text(c, value, 14);
+        tvValue.setTextColor(COLOR_TEXT_MAIN);
+        tvValue.setTypeface(null, android.graphics.Typeface.BOLD);
+        row.addView(tvValue);
+
+        return row;
+    }
+
     static Button button(Context c, String label, Runnable action) {
         return button(c, label, COLOR_PRIMARY, Color.WHITE, action);
     }
@@ -86,16 +135,57 @@ final class Ui {
         b.setElevation(dp(c, 2));
         b.setStateListAnimator(null);
 
-        GradientDrawable normal = roundedRect(bgColor, bgColor, 10, 0);
+        GradientDrawable normal = roundedRect(bgColor, bgColor, 12, 0);
         RippleDrawable ripple = new RippleDrawable(
             ColorStateList.valueOf(Color.argb(70, 255, 255, 255)), normal, null);
         b.setBackground(ripple);
 
-        b.setPadding(dp(c, 16), dp(c, 12), dp(c, 16), dp(c, 12));
+        b.setPadding(dp(c, 16), dp(c, 14), dp(c, 16), dp(c, 14));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, dp(c, 4), 0, dp(c, 8));
+        lp.setMargins(0, dp(c, 6), 0, dp(c, 8));
         b.setLayoutParams(lp);
+        b.setOnClickListener(v -> action.run());
+        return b;
+    }
+
+    static Button subButton(Context c, String label, Runnable action) {
+        Button b = new Button(c);
+        b.setText(label);
+        b.setTextColor(COLOR_PRIMARY);
+        b.setTextSize(14);
+        b.setTypeface(null, android.graphics.Typeface.BOLD);
+        b.setElevation(0);
+        b.setStateListAnimator(null);
+
+        GradientDrawable normal = roundedRect(COLOR_PRIMARY_LIGHT, COLOR_PRIMARY_LIGHT, 10, 0);
+        RippleDrawable ripple = new RippleDrawable(
+            ColorStateList.valueOf(Color.argb(50, 49, 130, 246)), normal, null);
+        b.setBackground(ripple);
+
+        b.setPadding(dp(c, 14), dp(c, 10), dp(c, 14), dp(c, 10));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        b.setLayoutParams(lp);
+        b.setOnClickListener(v -> action.run());
+        return b;
+    }
+
+    static Button outlineButton(Context c, String label, int strokeColor, int textColor, Runnable action) {
+        Button b = new Button(c);
+        b.setText(label);
+        b.setTextColor(textColor);
+        b.setTextSize(14);
+        b.setTypeface(null, android.graphics.Typeface.BOLD);
+        b.setElevation(0);
+        b.setStateListAnimator(null);
+
+        GradientDrawable normal = roundedRect(Color.WHITE, strokeColor, 10, 1);
+        RippleDrawable ripple = new RippleDrawable(
+            ColorStateList.valueOf(Color.argb(30, 0, 0, 0)), normal, null);
+        b.setBackground(ripple);
+
+        b.setPadding(dp(c, 14), dp(c, 10), dp(c, 14), dp(c, 10));
         b.setOnClickListener(v -> action.run());
         return b;
     }
@@ -109,9 +199,9 @@ final class Ui {
         e.setTextColor(COLOR_TEXT_MAIN);
         e.setHintTextColor(COLOR_TEXT_MUTED);
         e.setTextSize(15);
-        e.setBackground(roundedRect(Color.parseColor("#F8FAFC"), COLOR_STROKE, 8, 1));
-        int padH = dp(c, 12);
-        int padV = dp(c, 10);
+        e.setBackground(roundedRect(Color.parseColor("#F8FAFC"), COLOR_STROKE, 10, 1));
+        int padH = dp(c, 14);
+        int padV = dp(c, 12);
         e.setPadding(padH, padV, padH, padV);
         if (numeric) {
             e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_NUMBER_FLAG_DECIMAL);

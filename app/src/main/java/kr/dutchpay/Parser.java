@@ -8,9 +8,11 @@ public final class Parser {
         r.total=ReceiptTotalText.read(r.raw);
         boolean active = false; ItemParser items = new ItemParser(r);
         for (String source : rows) {
-            String s = Numbers.clean(source), compact = s.replaceAll("\\s", "");
+            String s = Numbers.clean(source);
+            s = s.replaceFirst("^\\s*\\d{1,6}\\s+(?=[가-힣A-Za-z])", "");
+            String compact = s.replaceAll("\\s", "");
             List<Long> ns = Numbers.values(s);
-            if (compact.matches(".*(합계|총구매액).*")) {
+            if (compact.matches(".*(합계|총구매액|결[제재]금액|실결제금액|신용카드|카드결제|현금결제|받은금액).*")) {
                 items.flush(); active = false; continue;
             }
             if (compact.matches("(소계|계)[:：]*[-−]?[0-9,]*원?")) {

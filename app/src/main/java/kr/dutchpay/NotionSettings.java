@@ -15,6 +15,7 @@ public final class NotionSettings {
     private static final String KEY_PROP_AMOUNT = "prop_amount";
     private static final String KEY_PROP_DATE = "prop_date";
     private static final String KEY_PROP_NOTE = "prop_note";
+    private static final String KEY_PROP_CATEGORY = "prop_category";
 
     private final SharedPreferences prefs;
 
@@ -49,11 +50,19 @@ public final class NotionSettings {
         return prefs.getString(KEY_PROP_NOTE, "비고").trim();
     }
 
+    public String getPropCategory() {
+        return prefs.getString(KEY_PROP_CATEGORY, "범주").trim();
+    }
+
     public boolean isConfigured() {
         return !getApiKey().isEmpty() && !getDatabaseId().isEmpty();
     }
 
     public void saveConfig(String apiKey, String dbId, String title, String amount, String date, String note) {
+        saveConfig(apiKey, dbId, title, amount, date, note, "범주");
+    }
+
+    public void saveConfig(String apiKey, String dbId, String title, String amount, String date, String note, String category) {
         prefs.edit()
             .putString(KEY_API_KEY, apiKey)
             .putString(KEY_DATABASE_ID, dbId)
@@ -61,6 +70,7 @@ public final class NotionSettings {
             .putString(KEY_PROP_AMOUNT, amount == null || amount.isEmpty() ? "금액" : amount)
             .putString(KEY_PROP_DATE, date == null || date.isEmpty() ? "날짜" : date)
             .putString(KEY_PROP_NOTE, note == null || note.isEmpty() ? "비고" : note)
+            .putString(KEY_PROP_CATEGORY, category == null || category.isEmpty() ? "범주" : category)
             .apply();
     }
 
@@ -94,6 +104,7 @@ public final class NotionSettings {
         EditText etAmount = createInputField(context, layout, "숫자 금액 열 (기본: 금액)", getPropAmount(), false);
         EditText etDate = createInputField(context, layout, "날짜 열 (기본: 날짜)", getPropDate(), false);
         EditText etNote = createInputField(context, layout, "비고/상세 열 (기본: 비고)", getPropNote(), false);
+        EditText etCategory = createInputField(context, layout, "범주/카테고리 열 (기본: 범주)", getPropCategory(), false);
 
         new AlertDialog.Builder(context)
             .setTitle("Notion 테이블 연동 설정")
@@ -106,6 +117,7 @@ public final class NotionSettings {
                     .putString(KEY_PROP_AMOUNT, etAmount.getText().toString().trim().isEmpty() ? "금액" : etAmount.getText().toString().trim())
                     .putString(KEY_PROP_DATE, etDate.getText().toString().trim().isEmpty() ? "날짜" : etDate.getText().toString().trim())
                     .putString(KEY_PROP_NOTE, etNote.getText().toString().trim().isEmpty() ? "비고" : etNote.getText().toString().trim())
+                    .putString(KEY_PROP_CATEGORY, etCategory.getText().toString().trim().isEmpty() ? "범주" : etCategory.getText().toString().trim())
                     .apply();
                 Toast.makeText(context, "노션 연동 설정이 저장되었습니다.", Toast.LENGTH_SHORT).show();
                 if (onSaved != null) onSaved.run();
@@ -137,3 +149,5 @@ public final class NotionSettings {
         return et;
     }
 }
+
+
