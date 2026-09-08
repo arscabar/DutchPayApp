@@ -350,11 +350,22 @@ public class MainActivity extends Activity {
         tab2Body.addView(notionCard);
     }
 
+        private void detachFromParent(View v) {
+        if (v != null && v.getParent() instanceof ViewGroup) {
+            ((ViewGroup) v.getParent()).removeView(v);
+        }
+    }
+
     void pickReceiptPhoto() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
-            .setType("image/*")
-            .addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(intent, 1);
+        try {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            startActivityForResult(Intent.createChooser(intent, "영수증 사진 선택"), 1);
+        } catch (Exception e) {
+            Intent fallback = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            startActivityForResult(fallback, 1);
+        }
     }
 
     @Override
@@ -367,11 +378,31 @@ public class MainActivity extends Activity {
     void handlePhoto(Uri uri) {
         currentUri = uri;
         final int id = ++scanId;
+
+        try {
+            getContentResolver().takePersistableUriPermission(
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) {}
+
         tab0Body.removeAllViews();
+
+        detachFromParent(progress);
+        detachFromParent(status);
+
+        if (progress == null) {
+            progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+            progress.setIndeterminate(true);
+        }
         progress.setVisibility(View.VISIBLE);
+
+        if (status == null) {
+            status = Ui.text(this, "", 13);
+            status.setGravity(Gravity.CENTER);
+        }
         status.setText("영수증을 분석하고 있습니다…");
 
         LinearLayout loadingCard = Ui.card(this);
+        loadingCard.setPadding(Ui.dp(this, 20), Ui.dp(this, 24), Ui.dp(this, 20), Ui.dp(this, 24));
         loadingCard.addView(progress);
         loadingCard.addView(status);
         tab0Body.addView(loadingCard);
@@ -382,7 +413,9 @@ public class MainActivity extends Activity {
             Scan.read(this, uri, engine).addOnCompleteListener(task -> {
                 if (id != scanId) return;
                 if (!task.isSuccessful() || task.getResult() == null) {
-                    status.setText("인식 실패: 다시 시도해 주세요.");
+                    Exception ex = task.getException();
+                    String err = (ex != null && ex.getMessage() != null) ? ex.getMessage() : "인식 실패";
+                    status.setText("인식 실패: 다시 시도해 주세요.\n(" + err + ")");
                     progress.setVisibility(View.GONE);
                     return;
                 }
@@ -391,14 +424,29 @@ public class MainActivity extends Activity {
                 currentReceipt = receipt;
 
                 tab0Body.removeAllViews();
-                new ReceiptEditor(this, tab0Body, tab1Body, receipt, uri, notionSettings,
-                    () -> switchTab(1),
-                    () -> switchTab(0)
-                );
+                try {
+                    new ReceiptEditor(this, tab0Body, tab1Body, receipt, uri, notionSettings,
+                        () -> switchTab(1),
+                        () -> switchTab(0)
+                    );
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    new AlertDialog.Builder(this)
+                        .setTitle("화면 표시 오류")
+                        .setMessage("영수증 화면을 구성하는 중 오류가 발생했습니다: " + t.getMessage())
+                        .setPositiveButton("확인", null)
+                        .show();
+                }
             });
-        } catch (java.io.IOException e) {
-            status.setText("이미지를 불러올 수 없습니다.");
+        } catch (Throwable e) {
+            e.printStackTrace();
+            status.setText("이미지를 불러올 수 없습니다: " + e.getMessage());
             progress.setVisibility(View.GONE);
+            new AlertDialog.Builder(this)
+                .setTitle("이미지 로드 오류")
+                .setMessage("선택한 이미지를 처리할 수 없습니다: " + e.getMessage())
+                .setPositiveButton("확인", null)
+                .show();
         }
     }
 
