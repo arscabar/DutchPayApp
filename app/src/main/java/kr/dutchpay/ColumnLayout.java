@@ -11,7 +11,7 @@ final class ColumnLayout {
         int pos=-1;
         for(int i=0;i<c.rows.size();i++){
             ColumnRows row=c.rows.get(i); OcrWord q=null,a=null,p=null;int last=i;
-            if(ColumnRows.compact(row.text()).matches(".*P[O0]S[-:]?0?1(?!\\d).*"))pos=i;
+            if(ColumnRows.compact(row.text()).matches(".*P[O0]S[-:]?0?[1-9](?:[-:]\\d+|(?!\\d)).*"))pos=i;
             if(ColumnRows.headers(row).isEmpty())continue;
             for(int j=i;j<Math.min(i+3,c.rows.size());j++){
                 ColumnRows near=c.rows.get(j);
@@ -46,7 +46,7 @@ final class ColumnLayout {
         for(int i=pos+1;i<c.rows.size();i++){
             ColumnRows row=c.rows.get(i);if(ColumnRows.footer(row.text()))break;
             for(OcrWord q:row.words){
-                Long n=ColumnRows.number(q);if(n==null || n<1 || n>999)continue;
+                Long n=ColumnRows.quantity(q);if(n==null || n<1 || n>999)continue;
                 for(OcrWord a:row.words){
                     Long v=ColumnRows.number(a);
                     if(a.x()>q.x()+row.height() && v!=null && Math.abs(v)>=100)

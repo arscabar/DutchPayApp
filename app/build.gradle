@@ -3,23 +3,41 @@ plugins { id 'com.android.application' }
 android {
     namespace 'kr.dutchpay'
     compileSdk 35
-    buildToolsVersion '35.0.0'
+    buildToolsVersion '36.0.0'
     defaultConfig {
         applicationId 'kr.dutchpay'
         minSdk 26
         targetSdk 35
-        versionCode 10
-        versionName '0.8.2'
+        versionCode 11
+        versionName '0.8.3'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    }
+    signingConfigs {
+        debug {
+            storeFile file('dutchpay.keystore')
+            storePassword 'android'
+            keyAlias 'dutchpay'
+            keyPassword 'android'
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             signingConfig signingConfigs.debug
+        }
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
     useLibrary 'android.test.runner'

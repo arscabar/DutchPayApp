@@ -213,8 +213,8 @@ final class RowEditor extends LinearLayout {
         reviewed.setText("항목 확인 완료");
         reviewed.setTextColor(Color.parseColor("#991B1B"));
         reviewed.setTextSize(12);
-        reviewed.setChecked(item.warning.isEmpty());
-        reviewed.setVisibility(item.warning.isEmpty() ? View.GONE : View.VISIBLE);
+        reviewed.setChecked(true);
+        reviewed.setVisibility(View.GONE);
         detailLayout.addView(reviewed);
 
         Button btnClose = new Button(c);
@@ -237,8 +237,6 @@ final class RowEditor extends LinearLayout {
                 unit.setEnabled(!quantity.getText().toString().trim().isEmpty());
             tvNameDisplay.setText(name.getText().toString());
             tvSubInfo.setText(formatSubInfo());
-            reviewed.setVisibility(VISIBLE);
-            reviewed.setChecked(false);
             changed.run();
         }, name, unit, quantity);
         watch(changed, percent);
@@ -267,6 +265,11 @@ final class RowEditor extends LinearLayout {
         try { val = Integer.parseInt(cur); } catch (Exception ignored) {}
         int next = Math.max(1, val + delta);
         quantity.setText(String.valueOf(next));
+    }
+
+    void expand() {
+        detailLayout.setVisibility(View.VISIBLE);
+        tvToggleChevron.setText(" ▴");
     }
 
     private void toggleExpand() {
@@ -310,14 +313,9 @@ final class RowEditor extends LinearLayout {
             if (!unitStr.isEmpty()) unitVal = Long.parseLong(unitStr.replaceAll("[^0-9-]", ""));
         } catch (Exception ignored) {}
 
-        try {
-            long value = source.portion(qtyStr, pctStr, unitVal);
-            result.setText(String.format(Locale.KOREA, "%,d원", value));
-            return value;
-        } catch (Exception ex) {
-            result.setText("0원");
-            return 0;
-        }
+        long value = source.portion(qtyStr, pctStr, unitVal);
+        result.setText(String.format(Locale.KOREA, "%,d원", value));
+        return value;
     }
 
     String note() {

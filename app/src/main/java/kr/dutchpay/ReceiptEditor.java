@@ -54,12 +54,13 @@ final class ReceiptEditor {
         receiptDate = extractReceiptDate(receipt.raw);
 
         // 일반 영수증 / 카드전표 등 품목 표가 없는 경우에도 총액을 기반으로 즉시 정산 및 노션 저장이 가능하도록 자동 생성
+        boolean autoExpandFirst = false;
         if (receipt.items.isEmpty()) {
             long initialAmount = (receipt.total != null && receipt.total > 0) ? receipt.total : 0L;
             String itemName = (storeTitle != null && !storeTitle.isEmpty() && !storeTitle.equals("영수증 정산")) ? storeTitle : "일반 결제";
             Item fallbackItem = new Item(itemName, initialAmount, 1, initialAmount);
-            fallbackItem.warning = (initialAmount > 0) ? "품목 없는 일반 영수증: 총 결제액이 자동 반영되었습니다." : "금액을 직접 확인 후 입력하세요.";
             receipt.items.add(fallbackItem);
+            autoExpandFirst = (initialAmount == 0L);
         }
         receipt.validate();
 
@@ -177,9 +178,9 @@ final class ReceiptEditor {
         reviewed.setTextColor(Color.parseColor("#991B1B"));
         reviewed.setTextSize(13);
         reviewed.setPadding(Ui.dp(c, 4), Ui.dp(c, 6), 0, 0);
+        reviewed.setChecked(true);
 
         if (receipt.warnings.isEmpty()) {
-            reviewed.setChecked(true);
             reviewed.setVisibility(View.GONE);
         }
 
@@ -290,8 +291,10 @@ final class ReceiptEditor {
 
         Button btnQuickAdd = Ui.subButton(c, "＋ 직접 추가", () -> {
             Item manual = new Item("직접 추가", 0, 1, 0);
-            manual.warning = "직접 입력한 금액·수량을 확인하세요";
             add(c, (LinearLayout) itemsCard.getChildAt(1), manual);
+            if (!editors.isEmpty()) {
+                editors.get(editors.size() - 1).expand();
+            }
             update();
         });
         itemsHeader.addView(btnQuickAdd);
@@ -312,6 +315,9 @@ final class ReceiptEditor {
                 div.setLayoutParams(dLp);
                 rows.addView(div);
             }
+        }
+        if (autoExpandFirst && !editors.isEmpty()) {
+            editors.get(0).expand();
         }
         itemsBody.addView(itemsCard);
 
@@ -555,7 +561,8 @@ final class ReceiptEditor {
 
         boolean canExport = valid && selected && confirmed;
         copy.setEnabled(canExport);
-        btnNotion.setEnabled(canExport);
+        // 노션에 저장하기 버튼은 인식 여부나 경고 상태와 무관하게 언제든 즉시 누를 수 있도록 항상 활성화 유지
+        btnNotion.setEnabled(true);
 
         updateNotionPreview();
     }
@@ -574,6 +581,12 @@ final class ReceiptEditor {
             return;
         }
 
+        long resolvedAmount = currentSelectedSum;
+        if (resolvedAmount == 0 && receipt != null && receipt.total != null && receipt.total > 0) {
+            resolvedAmount = receipt.total;
+        }
+        final long finalAmount = resolvedAmount;
+
         ProgressDialog progress = new ProgressDialog(c);
         progress.setMessage("Notion 테이블에 등록하는 중입니다…");
         progress.setCancelable(false);
@@ -583,16 +596,19 @@ final class ReceiptEditor {
         final String finalDate = (receiptDate != null && !receiptDate.trim().isEmpty())
             ? receiptDate
             : new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.KOREA).format(new java.util.Date());
+        final String finalNote = (note != null && !note.trim().isEmpty())
+            ? note
+            : ("상호: " + finalStoreTitle + " (" + finalDate + ")\n최종 선택 합계: " + String.format(Locale.KOREA, "%,d원", finalAmount));
 
-        NotionClient.createPage(notionSettings, finalStoreTitle, currentSelectedSum, finalDate, note, finalCategory, new NotionClient.Callback() {
+        NotionClient.createPage(notionSettings, finalStoreTitle, finalAmount, finalDate, finalNote, finalCategory, new NotionClient.Callback() {
             @Override
             public void onSuccess(String pageUrl) {
-                progress.dismiss();
+                try { progress.dismiss(); } catch (Exception ignored) {}
                 new AlertDialog.Builder(c)
                     .setTitle("🎉 Notion 등록 완료!")
                     .setMessage("영수증 정산 내역이 노션 데이터베이스에 성공적으로 저장되었습니다.\n\n"
                         + "• 상호: " + finalStoreTitle + "\n"
-                        + "• 금액: " + String.format(Locale.KOREA, "%,d원", currentSelectedSum) + "\n"
+                        + "• 금액: " + String.format(Locale.KOREA, "%,d원", finalAmount) + "\n"
                         + "• 날짜: " + finalDate + "\n"
                         + "• 범주: " + (finalCategory.isEmpty() ? "없음" : finalCategory))
                     .setPositiveButton("노션 페이지 열기 ↗", (d, w) -> {
@@ -606,10 +622,10 @@ final class ReceiptEditor {
 
             @Override
             public void onError(String message) {
-                progress.dismiss();
+                try { progress.dismiss(); } catch (Exception ignored) {}
                 new AlertDialog.Builder(c)
                     .setTitle("Notion 등록 실패")
-                    .setMessage(message + "\n\n우측 상단 ⚙️ 노션 설정에서 API Key, Database ID, 컬럼명이 올바른지 확인해 주세요.")
+                    .setMessage(message + "\n\n하단 ⚙️ 설정 탭에서 API Key, Database ID, 그리고 노션 데이터베이스의 통합(연결) 권한이 허용되어 있는지 확인해 주세요.")
                     .setPositiveButton("설정 확인", (d, w) -> notionSettings.showDialog(c, null))
                     .setNegativeButton("닫기", null)
                     .show();
@@ -660,6 +676,18 @@ final class ReceiptEditor {
                 if (m.find()) {
                     String cand = cleanStoreCandidate(m.group(1));
                     if (isValidStoreName(cand) && !cand.equals("가맹점") && !cand.equals("지점")) {
+                        if (i > 0 && cand.endsWith("점") && cand.length() <= 6) {
+                            String prevLine = lines[i - 1].trim();
+                            String prevNoSpace = prevLine.replaceAll("\\s+", "");
+                            String prevClean = cleanStoreCandidate(prevLine);
+                            if (!isSystemOrHeaderLine(prevNoSpace) && isValidStoreName(prevClean)
+                                && prevClean.matches(".*[가-힣A-Za-z].*") && !prevClean.contains("안내") && !prevClean.contains("영수증")) {
+                                return prevClean + " " + cand;
+                            }
+                        }
+                        if (cand.endsWith("점") && !cand.contains("투썸") && raw.contains("투썸하트")) {
+                            return "투썸플레이스 " + cand;
+                        }
                         return cand;
                     }
                 }

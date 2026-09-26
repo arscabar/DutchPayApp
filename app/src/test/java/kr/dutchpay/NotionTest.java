@@ -7,19 +7,16 @@ public class NotionTest {
     @Test
     public void testDatabaseIdExtractionFromUrl() {
         String fullUrl = "https://www.notion.so/myworkspace/8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d?v=123456";
-        String id = fullUrl;
-        if (id.contains("/")) {
-            String path = id.substring(id.lastIndexOf('/') + 1);
-            if (path.contains("?")) path = path.substring(0, path.indexOf('?'));
-            id = path.replaceAll("-", "");
-        }
-        assertEquals("8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d", id);
+        assertEquals("8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d", NotionSettings.extractDatabaseId(fullUrl));
+
+        String slugUrl = "https://www.notion.so/myworkspace/DutchPay-가계부-8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d?v=123456";
+        assertEquals("8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d", NotionSettings.extractDatabaseId(slugUrl));
     }
 
     @Test
     public void testDatabaseIdExtractionWithHyphens() {
         String rawWithHyphens = "8a9b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d";
-        assertEquals("8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d", rawWithHyphens.replaceAll("-", ""));
+        assertEquals("8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d", NotionSettings.extractDatabaseId(rawWithHyphens));
     }
 
     @Test

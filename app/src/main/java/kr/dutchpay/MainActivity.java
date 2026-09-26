@@ -297,7 +297,12 @@ public class MainActivity extends Activity {
         Button btnSave = Ui.button(this, "저장하기", Ui.COLOR_PRIMARY, Color.WHITE, () -> {
             String key = etApiKey.getText().toString().trim();
             String db = etDbId.getText().toString().trim();
-            notionSettings.saveConfig(key, db, "이름", "금액", "날짜", "비고");
+            notionSettings.saveConfig(key, db,
+                notionSettings.getPropTitle(),
+                notionSettings.getPropAmount(),
+                notionSettings.getPropDate(),
+                notionSettings.getPropNote(),
+                notionSettings.getPropCategory());
             Toast.makeText(this, "노션 설정이 저장되었습니다.", Toast.LENGTH_SHORT).show();
             buildTab2();
         });
@@ -313,7 +318,12 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "API Key와 Database ID를 먼저 입력하세요.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            notionSettings.saveConfig(key, db, "이름", "금액", "날짜", "비고");
+            notionSettings.saveConfig(key, db,
+                notionSettings.getPropTitle(),
+                notionSettings.getPropAmount(),
+                notionSettings.getPropDate(),
+                notionSettings.getPropNote(),
+                notionSettings.getPropCategory());
             ProgressDialog testPd = new ProgressDialog(this);
             testPd.setMessage("Notion 연결을 확인하고 있습니다…");
             testPd.show();
@@ -321,7 +331,7 @@ public class MainActivity extends Activity {
             NotionClient.testConnection(notionSettings, new NotionClient.Callback() {
                 @Override
                 public void onSuccess(String pageUrl) {
-                    testPd.dismiss();
+                    try { testPd.dismiss(); } catch (Exception ignored) {}
                     new AlertDialog.Builder(MainActivity.this)
                         .setTitle("✓ Notion 연결 성공")
                         .setMessage("노션 데이터베이스 연결이 정상적으로 확인되었습니다!")
@@ -332,7 +342,7 @@ public class MainActivity extends Activity {
 
                 @Override
                 public void onError(String message) {
-                    testPd.dismiss();
+                    try { testPd.dismiss(); } catch (Exception ignored) {}
                     new AlertDialog.Builder(MainActivity.this)
                         .setTitle("연결 실패")
                         .setMessage(message)
@@ -412,15 +422,13 @@ public class MainActivity extends Activity {
         try {
             Scan.read(this, uri, engine).addOnCompleteListener(task -> {
                 if (id != scanId) return;
+                Receipt receipt;
                 if (!task.isSuccessful() || task.getResult() == null) {
-                    Exception ex = task.getException();
-                    String err = (ex != null && ex.getMessage() != null) ? ex.getMessage() : "인식 실패";
-                    status.setText("인식 실패: 다시 시도해 주세요.\n(" + err + ")");
-                    progress.setVisibility(View.GONE);
-                    return;
+                    receipt = new Receipt();
+                    receipt.warnings.add("자동 인식에 실패하여 직접 입력 모드로 열렸습니다.");
+                } else {
+                    receipt = task.getResult();
                 }
-
-                Receipt receipt = task.getResult();
                 currentReceipt = receipt;
 
                 tab0Body.removeAllViews();
@@ -440,13 +448,16 @@ public class MainActivity extends Activity {
             });
         } catch (Throwable e) {
             e.printStackTrace();
-            status.setText("이미지를 불러올 수 없습니다: " + e.getMessage());
-            progress.setVisibility(View.GONE);
-            new AlertDialog.Builder(this)
-                .setTitle("이미지 로드 오류")
-                .setMessage("선택한 이미지를 처리할 수 없습니다: " + e.getMessage())
-                .setPositiveButton("확인", null)
-                .show();
+            Receipt fallbackReceipt = new Receipt();
+            fallbackReceipt.warnings.add("자동 인식에 실패하여 직접 입력 모드로 열렸습니다.");
+            currentReceipt = fallbackReceipt;
+            tab0Body.removeAllViews();
+            try {
+                new ReceiptEditor(this, tab0Body, tab1Body, fallbackReceipt, uri, notionSettings,
+                    () -> switchTab(1),
+                    () -> switchTab(0)
+                );
+            } catch (Throwable ignored) {}
         }
     }
 

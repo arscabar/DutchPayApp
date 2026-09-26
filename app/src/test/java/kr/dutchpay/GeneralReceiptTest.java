@@ -174,4 +174,120 @@ public class GeneralReceiptTest {
         assertTrue(jsonSnippet.contains("\"name\": \"식비\""));
         assertTrue(jsonSnippet.contains("select"));
     }
+
+    @Test
+    public void testTwosomeReceipt() {
+        String raw = "주문하신 메뉴가 준비되면 해당\n" +
+                     "주문번호 또는 입력하신 핸드폰번호로\n" +
+                     "안내드리겠습니다.\n" +
+                     "영수증과 신용카드를 챙겨주세요.\n" +
+                     "주문번호 : 02-0012\n" +
+                     "신정역점\n" +
+                     "820-73-00655 Tel 070)4896-3939 윤설경\n" +
+                     "서울특별시 양천구 오목로 147 (신정동, 제이\n" +
+                     "클래스목동주상복합)1층 투\n" +
+                     "구매 시마다 쌓이는 하트로 무료커피!\n" +
+                     "무료케이크를! 지금 투썸하트앱 가입하세요\n" +
+                     "POS 02-010305142 2026/09/26 10 13\n" +
+                     "======================================\n" +
+                     "ice아메리카노아로마R 1개 4,700\n" +
+                     "ice아메리카노M 1개 6,100\n" +
+                     "======================================\n" +
+                     "총 액 10,800\n" +
+                     "합 계 10,800\n" +
+                     "과세물품가액 9,818\n" +
+                     "부가세 982\n" +
+                     "신용카드 10,800\n" +
+                     "[결제금액] 10,800";
+
+        assertEquals("2026-09-26", extractReceiptDate(raw));
+        Receipt receipt = Parser.parse(Arrays.asList(raw.split("\n")));
+        assertEquals(Long.valueOf(10800), receipt.total);
+        assertEquals(2, receipt.items.size());
+        assertEquals("ice아메리카노아로마R", receipt.items.get(0).name);
+        assertEquals(1, receipt.items.get(0).count);
+        assertEquals(4700L, receipt.items.get(0).unit);
+        assertEquals("ice아메리카노M", receipt.items.get(1).name);
+        assertEquals(1, receipt.items.get(1).count);
+        assertEquals(6100L, receipt.items.get(1).unit);
+        assertEquals(10800L, receipt.itemSum());
+        assertTrue(receipt.warnings.isEmpty());
+    }
+
+    @Test
+    public void testPreppersReceipt() {
+        String raw = "프레퍼스 다이어트 푸드\n" +
+                     "선릉역점\n" +
+                     "서울 강남구 테헤란로 421 1층 1호\n" +
+                     "주문 시간 2026-09-21 18:19:41\n" +
+                     "사업자등록번호 6068663224\n" +
+                     "전화번호 025665505\n" +
+                     "[주문번호] : 1590\n" +
+                     "매장 식사\n" +
+                     "--------------------------------------\n" +
+                     "▶비프 커리 덮밥\n" +
+                     " └비프 스테이크 (소부채살 150g) 추 9,900\n" +
+                     "가\n" +
+                     "24,800 x 1 24,800\n" +
+                     "▶비프 콥 플레이트\n" +
+                     " └레몬갈릭소스 0\n" +
+                     " └구운계란 0\n" +
+                     "12,900 x 1 12,900\n" +
+                     "--------------------------------------\n" +
+                     "총주문금액: 37,700\n" +
+                     "할인금액: -0\n" +
+                     "판매금액: 34,273\n" +
+                     "부가세 : 3,427\n" +
+                     "총결제금액: 37,700";
+
+        assertEquals("2026-09-21", extractReceiptDate(raw));
+        Receipt receipt = Parser.parse(Arrays.asList(raw.split("\n")));
+        assertEquals(Long.valueOf(37700), receipt.total);
+        assertEquals(2, receipt.items.size());
+        assertEquals("비프 커리 덮밥", receipt.items.get(0).name);
+        assertEquals(1, receipt.items.get(0).count);
+        assertEquals(24800L, receipt.items.get(0).unit);
+        assertEquals("비프 콥 플레이트", receipt.items.get(1).name);
+        assertEquals(1, receipt.items.get(1).count);
+        assertEquals(12900L, receipt.items.get(1).unit);
+        assertEquals(37700L, receipt.itemSum());
+        assertTrue(receipt.warnings.isEmpty());
+    }
+
+    @Test
+    public void testGyukatsuJeongReceipt() {
+        String raw = "영 수 증\n" +
+                     "상호:규카츠정_강남점\n" +
+                     "대표:김관우 사업자:357-06-03486\n" +
+                     "전화:\n" +
+                     "주소:서울특별시 강남구 테헤란로1길 28-1\n" +
+                     "지하층 (역삼동 , 준영빌딩)\n" +
+                     "거래일자:2026-09-17 18:27:32\n" +
+                     "거래번호:050-0036\n" +
+                     "--------------------------------------\n" +
+                     "티켓명 매수 금액\n" +
+                     "--------------------------------------\n" +
+                     "규카츠정식\n" +
+                     "1 17,000\n" +
+                     "카레[점보]정식(매운카레)\n" +
+                     "1 28,000\n" +
+                     "--------------------------------------\n" +
+                     "공급가: 40,908\n" +
+                     "V A T : 4,092\n" +
+                     "합 계 : 45,000";
+
+        assertEquals("규카츠정_강남점", extractStoreTitle(raw));
+        assertEquals("2026-09-17", extractReceiptDate(raw));
+        Receipt receipt = Parser.parse(Arrays.asList(raw.split("\n")));
+        assertEquals(Long.valueOf(45000), receipt.total);
+        assertEquals(2, receipt.items.size());
+        assertEquals("규카츠정식", receipt.items.get(0).name);
+        assertEquals(1, receipt.items.get(0).count);
+        assertEquals(17000L, receipt.items.get(0).unit);
+        assertEquals("카레[점보]정식(매운카레)", receipt.items.get(1).name);
+        assertEquals(1, receipt.items.get(1).count);
+        assertEquals(28000L, receipt.items.get(1).unit);
+        assertEquals(45000L, receipt.itemSum());
+        assertTrue(receipt.warnings.isEmpty());
+    }
 }

@@ -13,4 +13,5 @@ __pycache__/
 .env.*
 *.jks
 *.keystore
+!app/dutchpay.keystore
 *.log

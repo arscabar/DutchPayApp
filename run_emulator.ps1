@@ -1,3 +1,4 @@
+$apkPath = Join-Path $PSScriptRoot "app\build\outputs\apk\debug\app-debug.apk"
 Write-Host "Starting Pixel 7 Emulator..." -ForegroundColor Cyan
 Set-Location "C:\Program Files (x86)\Android\android-sdk\emulator"
 Start-Process .\emulator.exe -ArgumentList "-avd pixel_7_-_api_35"
@@ -7,7 +8,7 @@ Set-Location "C:\Program Files (x86)\Android\android-sdk\platform-tools"
 .\adb.exe wait-for-device
 
 Write-Host "Installing latest DutchPay App build..." -ForegroundColor Yellow
-.\adb.exe install -r "e:\DutchPayApp\app\build\outputs\apk\debug\app-debug.apk"
+.\adb.exe install -r $apkPath
 
 Write-Host "Launching DutchPay App..." -ForegroundColor Green
 .\adb.exe shell am start -S -n kr.dutchpay/.MainActivity

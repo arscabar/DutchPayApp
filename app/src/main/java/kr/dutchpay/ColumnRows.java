@@ -61,7 +61,7 @@ final class ColumnRows {
         return out;
     }
     static boolean footer(String s){
-        return compact(s).matches(".*(합계|함계|소계|총구매|과세|부가세|공급가|신용|카드|결제|받을금액).*" )
+        return compact(s).matches(".*(합계|함계|소계|총액|총주문|총구매|과세|부가세|공급가|신용|카드|결제|받을금액).*" )
             || compact(s).matches("(판매액|판매금액)[:：]?[0-9,.원₩￦−-]*")
             || compact(s).matches("계[:：]+.*");
     }
@@ -111,13 +111,13 @@ final class ColumnRows {
     }
     static List<OcrWord> headers(ColumnRows row){
         List<OcrWord> out=new ArrayList<>();
-        Pattern labels=Pattern.compile("[단딘]\\s*가|수\\s*[량랑람당]|[금급]\\s*액");
+        Pattern labels=Pattern.compile("[단딘]\\s*가|수\\s*[량랑람당]|매\\s*수|[금급]\\s*액");
         for(OcrWord w:row.words){
             Matcher m=labels.matcher(w.text);
             while(m.find()){
                 int x=w.box.left+w.box.width()*m.start()/w.text.length();
                 int end=w.box.left+w.box.width()*m.end()/w.text.length();
-                String label=compact(m.group()).replace("딘가","단가").replace("급액","금액");
+                String label=compact(m.group()).replace("딘가","단가").replace("급액","금액").replace("매수","수량");
                 out.add(new OcrWord(label,new Rect(x,w.box.top,end,w.box.bottom)));
             }
         }

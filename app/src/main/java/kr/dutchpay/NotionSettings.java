@@ -28,8 +28,20 @@ public final class NotionSettings {
     }
 
     public String getDatabaseId() {
-        String id = prefs.getString(KEY_DATABASE_ID, "").trim();
+        return extractDatabaseId(prefs.getString(KEY_DATABASE_ID, ""));
+    }
+
+    public static String extractDatabaseId(String rawId) {
+        if (rawId == null) return "";
+        String id = rawId.trim();
         if (id.contains("?")) id = id.substring(0, id.indexOf('?'));
+        if (id.contains("#")) id = id.substring(0, id.indexOf('#'));
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(
+            "([0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})"
+        ).matcher(id);
+        if (m.find()) {
+            return m.group(1).replaceAll("-", "").trim();
+        }
         if (id.contains("/")) id = id.substring(id.lastIndexOf('/') + 1);
         return id.replaceAll("-", "").trim();
     }

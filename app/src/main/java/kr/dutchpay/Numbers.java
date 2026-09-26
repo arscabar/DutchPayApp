@@ -4,10 +4,11 @@ import java.util.*;
 import java.util.regex.*;
 
 final class Numbers {
-    static final Pattern VALUE = Pattern.compile("(?<![\\p{L}\\d])[-−]?\\d[\\d,]*(?:원)?(?![\\p{L}\\d])");
+    static final Pattern VALUE = Pattern.compile("(?<![\\p{L}\\d])[-−]?\\d[\\d,]*(?:원|개)?(?![\\p{L}\\d])");
     static String clean(String s) {
         return s.replaceAll("(?<!\\d)-\\s*(\\d{1,3})\\s*-(?=\\s|$)", "$1")
                 .replaceAll("(?<=\\d)[.,]\\s*(?=\\d{3}(?:\\D|$))", ",")
+                .replaceAll("(?<=\\d)\\s*[xX×*]\\s*(?=\\d)", " ")
                 .replace('−', '-').replaceAll("-\\s+(?=\\d)", "-");
     }
     static List<Long> values(String s) {
@@ -20,7 +21,8 @@ final class Numbers {
         return out;
     }
     static String name(String s) {
-        Matcher m = Pattern.compile("(?:\\t|\\s)+-?\\d[\\d,]*(?:원)?(?:\\s|$)").matcher(clean(s));
-        return (m.find() ? s.substring(0, m.start()) : s).trim();
+        String cleaned = clean(s);
+        Matcher m = Pattern.compile("(?:\\t|\\s)+-?\\d[\\d,]*(?:원|개)?(?:\\s|$)").matcher(cleaned);
+        return (m.find() ? cleaned.substring(0, m.start()) : cleaned).trim();
     }
 }
